@@ -1,3 +1,22 @@
+/**
+ * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
+ * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
+
+ * This file is part of JRakLibPlus.
+ *
+ * JRakLibPlus is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JRakLibPlus is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with JRakLibPlus.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package io.github.jython234.jraklibplus.server;
 
 
@@ -21,10 +40,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 /**
  * An implementation of a Minecraft: Pocket Edition RakNet server
@@ -46,7 +62,7 @@ public class RakNetServer extends Thread {
     private long lastTick;
 
     private static Map<Byte, Class<? extends RakNetPacket>> packets = new ConcurrentHashMap<>();
-    private Queue<UnknownPacket> packetQueue = new ArrayBlockingQueue<>(16);
+    private Queue<UnknownPacket> packetQueue = new ConcurrentLinkedQueue<>();
     private Map<String, NioSession> sessions = new ConcurrentHashMap<>();
 
     /**
@@ -109,11 +125,12 @@ public class RakNetServer extends Thread {
 
     private void tick() throws IOException {
         readPackets();
-        UnknownPacket[] packets = packetQueue.stream().toArray(UnknownPacket[]::new);
-        for(UnknownPacket packet : packets) {
-            packet.session.handlePacket(packet.packet);
+        int max = 1000;
+        while(max-- > 0) {
+            if(packetQueue.isEmpty()) break;
+            UnknownPacket pkt = packetQueue.remove();
+            pkt.session.handlePacket(pkt.packet);
         }
-        packetQueue.removeAll(Arrays.asList(packets));
         sessions.values().forEach(session -> session.update(System.currentTimeMillis()));
     }
 
