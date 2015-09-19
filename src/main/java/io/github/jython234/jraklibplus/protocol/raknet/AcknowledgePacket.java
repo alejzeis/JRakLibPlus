@@ -20,6 +20,7 @@
 package io.github.jython234.jraklibplus.protocol.raknet;
 
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
 import io.github.jython234.jraklibplus.nio.NioBuffer;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 
@@ -77,7 +78,10 @@ public abstract class AcknowledgePacket extends RakNetPacket {
             }
             records = records + 1;
         }
-
+        /*
+        buffer = JavaByteBuffer.allocate(payload.toByteArray().length + 3, ByteOrder.BIG_ENDIAN);
+        buffer.putByte(getPID());
+        */
         buffer.putUnsignedShort(records);
         buffer.put(payload.toByteArray());
     }
@@ -103,5 +107,10 @@ public abstract class AcknowledgePacket extends RakNetPacket {
             }
         }
         this.packets = packets.stream().toArray(Integer[]::new);
+    }
+
+    @Override
+    public int getSize() {
+        return 1;
     }
 }

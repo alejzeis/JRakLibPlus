@@ -20,6 +20,7 @@
 package io.github.jython234.jraklibplus.protocol;
 
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
 import io.github.jython234.jraklibplus.nio.NioBuffer;
 
 import java.nio.ByteOrder;
@@ -44,6 +45,7 @@ public abstract class RakNetPacket {
      */
     public final byte[] encode() {
         Buffer b = NioBuffer.allocateBuffer(getSize(), ByteOrder.BIG_ENDIAN);
+        //Buffer b = JavaByteBuffer.allocate(getSize(), ByteOrder.BIG_ENDIAN);
         b.putByte(getPID());
         _encode(b);
         return b.toByteArray();
@@ -54,7 +56,8 @@ public abstract class RakNetPacket {
      * @param bytes The raw byte array of this packet to be decoded from.
      */
     public final void decode(byte[] bytes) {
-        Buffer b = NioBuffer.wrapBuffer(bytes, ByteOrder.BIG_ENDIAN);
+        //Buffer b = NioBuffer.wrapBuffer(bytes, ByteOrder.BIG_ENDIAN);
+        Buffer b = JavaByteBuffer.wrap(bytes, ByteOrder.BIG_ENDIAN);
         b.getByte();
         _decode(b);
     }

@@ -63,6 +63,6 @@ public class OpenConnectionReply2Packet extends RakNetPacket {
 
     @Override
     public int getSize() {
-        return 30;
+        return 35;
     }
 }
