@@ -2,3 +2,5 @@ sudo: false
 language: java
 install: echo ""
 script: mvn license:check package
+jdk:
+  - oraclejdk8
