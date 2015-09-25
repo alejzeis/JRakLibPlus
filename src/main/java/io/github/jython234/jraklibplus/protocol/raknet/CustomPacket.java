@@ -43,10 +43,14 @@ public abstract class CustomPacket extends RakNetPacket {
 
     @Override
     protected void _decode(Buffer buffer) {
+        _decode(buffer, false);
+    }
+
+    public void _decode(Buffer buffer, boolean extraByte) {
         sequenceNumber = buffer.getLTriad();
         while (buffer.getRemainingBytes() >= 4) { //4 is the smallest amount of bytes an EncapsulatedPacket can be
             EncapsulatedPacket packet = new EncapsulatedPacket();
-            packet._decode(buffer);
+            packet._decode(buffer, extraByte);
             packets.add(packet);
         }
     }

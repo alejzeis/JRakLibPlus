@@ -21,6 +21,8 @@ package io.github.jython234.jraklibplus.server;
 
 
 import io.github.jython234.jraklibplus.JRakLibPlus;
+import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.protocol.minecraft.*;
 import io.github.jython234.jraklibplus.protocol.raknet.*;
@@ -35,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.util.Arrays;
 import java.util.Map;
@@ -249,6 +252,25 @@ public class RakNetServer extends Thread {
         if(packets.containsKey(buffer[0])) {
             try {
                 RakNetPacket packet = packets.get(buffer[0]).newInstance();
+                packet.decode(buffer);
+                return packet;
+            } catch (InstantiationException | IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
+    }
+
+    public static RakNetPacket getAndDecodePacket(byte[] buffer, NioSession session) {
+        if(packets.containsKey(buffer[0])) {
+            try {
+                RakNetPacket packet = packets.get(buffer[0]).newInstance();
+                if(packet instanceof CustomPacket) { //TODO: HACK
+                    Buffer b = JavaByteBuffer.wrap(buffer, ByteOrder.BIG_ENDIAN);
+                    b.getByte(); //PID
+                    ((CustomPacket) packet)._decode(b, session.flagReadExtraByte);
+                    return packet;
+                }
                 packet.decode(buffer);
                 return packet;
             } catch (InstantiationException | IllegalAccessException e) {

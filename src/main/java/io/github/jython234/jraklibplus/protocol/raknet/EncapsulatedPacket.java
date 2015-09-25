@@ -72,6 +72,10 @@ public class EncapsulatedPacket extends RakNetPacket {
 
     @Override
     protected void _decode(Buffer buffer) {
+        _decode(buffer, false);
+    }
+
+    protected void _decode(Buffer buffer, boolean extraByte) {
         //Header
         byte flags = buffer.getByte();
         reliability = Reliability.lookup((byte) ((flags & 0b11100000) >> 5));
@@ -93,7 +97,12 @@ public class EncapsulatedPacket extends RakNetPacket {
             splitIndex = buffer.getInt();
         }
 
-        payload = buffer.get(length);
+        if(extraByte) {
+            payload = buffer.get(length - 1);
+            buffer.getByte();
+        } else {
+            payload = buffer.get(length);
+        }
     }
 
     @Override

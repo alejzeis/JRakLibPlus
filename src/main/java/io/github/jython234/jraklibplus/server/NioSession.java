@@ -44,6 +44,13 @@ public class NioSession {
 
     public static int WINDOW_SIZE = 2048;
 
+    /**
+     * TODO: HACK
+     * <br>
+     * This is a hack to a strange bug. Set this to true when a 0.12.1 client spawns.
+     */
+    public boolean flagReadExtraByte = false;
+
     private int messageIndex = 0;
     private Map<Byte, Integer> channelIndex = new ConcurrentHashMap<>();
 

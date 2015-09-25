@@ -49,7 +49,7 @@ public class PacketWorker implements Runnable {
             session = server.openSession(address);
         }
         try {
-            server.addToQueue(RakNetServer.getAndDecodePacket(packet), session);
+            server.addToQueue(RakNetServer.getAndDecodePacket(packet, session), session);
         } catch(BufferUnderflowException e) {
             server.getLogger().warn("("+address+") Decode Failed! "+e.getClass().getName()+": "+e.getMessage());
             server.getLogger().warn("BufferUnderFlow: "+ JRakLibPlus.printBytesAsHex(packet));
