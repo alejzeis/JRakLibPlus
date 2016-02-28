@@ -62,4 +62,12 @@ public class SystemAddress {
     public String toString() {
         return ipAddress+":"+port;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof SystemAddress) {
+            return ((SystemAddress) obj).getIpAddress().equals(ipAddress) && ((SystemAddress) obj).getPort() == port;
+        }
+        return obj.equals(this);
+    }
 }

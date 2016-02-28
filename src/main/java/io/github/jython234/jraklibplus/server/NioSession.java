@@ -44,13 +44,6 @@ public class NioSession {
 
     public static int WINDOW_SIZE = 2048;
 
-    /**
-     * TODO: HACK
-     * <br>
-     * This is a hack to a strange bug. Set this to true when a 0.12.1 client spawns.
-     */
-    public boolean flagReadExtraByte = false;
-
     private int messageIndex = 0;
     private Map<Byte, Integer> channelIndex = new ConcurrentHashMap<>();
 
@@ -97,8 +90,8 @@ public class NioSession {
         this.server = server;
         this.address = address;
         sendQueue = new CustomPackets.CustomPacket_4();
-        lastUpdate = Instant.now().toEpochMilli();
-        startTime = Instant.now().toEpochMilli();
+        lastUpdate = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
         isActive = false;
         windowStart = -1;
         windowEnd = WINDOW_SIZE;
@@ -210,7 +203,7 @@ public class NioSession {
         if(!sendQueue.packets.isEmpty()){
             sendQueue.sequenceNumber = sendSeqNumber++;
             sendPacket(sendQueue);
-            sendQueue.sendTime = Instant.now().toEpochMilli();
+            sendQueue.sendTime = System.currentTimeMillis();
             recoveryQueue.put(sendQueue.sequenceNumber, sendQueue);
             sendQueue = new CustomPackets.CustomPacket_4();
         }
@@ -227,7 +220,7 @@ public class NioSession {
             packet.packets.add(pk);
 
             sendPacket(packet);
-            packet.sendTime = Instant.now().toEpochMilli();
+            packet.sendTime = System.currentTimeMillis();
             recoveryQueue.put(packet.sequenceNumber, packet);
             return;
         }
@@ -415,7 +408,7 @@ public class NioSession {
 
     public void handlePacket(RakNetPacket packet) {
         isActive = true;
-        lastUpdate = Instant.now().toEpochMilli();
+        lastUpdate = System.currentTimeMillis();
         if(state == STATE_CONNECTED || state == STATE_CONNECTING_2){
             if(packet.getPID() >= 0x80 || packet.getPID() <= 0x8f && packet instanceof CustomPacket){
                 CustomPacket dp = (CustomPacket) packet;

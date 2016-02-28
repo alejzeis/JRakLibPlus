@@ -234,7 +234,7 @@ public class RakNetServer extends Thread {
         public int maxPacketsPerTick = 5000;
         public int recvBufferSize = 4096;
         public int sendBufferSize = 4096;
-        public String name = "MCPE;A JRakLibPlus server;34;0.12.1;-1;0";
+        public String name = "MCPE;A JRakLibPlus server;45;0.14.0;-1;0";
         public boolean portChecking = true;
         /**
          * If this is true then the server will disconnect clients with invalid raknet protocols.
@@ -265,12 +265,6 @@ public class RakNetServer extends Thread {
         if(packets.containsKey(buffer[0])) {
             try {
                 RakNetPacket packet = packets.get(buffer[0]).newInstance();
-                if(packet instanceof CustomPacket) { //TODO: HACK
-                    Buffer b = JavaByteBuffer.wrap(buffer, ByteOrder.BIG_ENDIAN);
-                    b.getByte(); //PID
-                    ((CustomPacket) packet)._decode(b, session.flagReadExtraByte);
-                    return packet;
-                }
                 packet.decode(buffer);
                 return packet;
             } catch (InstantiationException | IllegalAccessException e) {
