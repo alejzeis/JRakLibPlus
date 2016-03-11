@@ -27,7 +27,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * ID_OPEN_CONNECTION_REQUEST_2 Packet Implementation
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class OpenConnectionRequest2Packet extends RakNetPacket {
 

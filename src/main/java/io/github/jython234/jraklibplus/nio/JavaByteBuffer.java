@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 /**
  * A Buffer implementation that wraps around a ByteBuffer
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class JavaByteBuffer implements Buffer {
     private ByteBuffer buffer;

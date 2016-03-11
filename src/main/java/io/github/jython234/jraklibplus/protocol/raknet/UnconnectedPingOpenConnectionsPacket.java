@@ -26,7 +26,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * ID_UNCONNECTED_PING_OPEN_CONNECTIONS Packet implementation
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class UnconnectedPingOpenConnectionsPacket extends ConnectedPingOpenConnectionsPacket {
 

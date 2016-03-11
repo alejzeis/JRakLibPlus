@@ -24,7 +24,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * Contains all CustomPacket implementations
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class CustomPackets {
 

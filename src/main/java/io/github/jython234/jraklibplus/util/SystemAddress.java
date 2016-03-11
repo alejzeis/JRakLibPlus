@@ -26,7 +26,7 @@ import java.net.SocketAddress;
  * Represents an address of a client or server. This class holds the IP address
  * and port.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class SystemAddress {
     private final String ipAddress;

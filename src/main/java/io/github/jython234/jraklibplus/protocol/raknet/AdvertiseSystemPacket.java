@@ -24,7 +24,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * ID_ADVERTISE_SYSTEM Packet implementation.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class AdvertiseSystemPacket extends UnconnectedPongOpenConnectionsPacket {
 

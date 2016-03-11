@@ -24,7 +24,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * MC_PONG Packet implementation.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class PongPacket extends PingPacket {
 

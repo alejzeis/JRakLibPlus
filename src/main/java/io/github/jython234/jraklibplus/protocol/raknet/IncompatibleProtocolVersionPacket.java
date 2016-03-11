@@ -26,7 +26,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * ID_INCOMPATIBLE_PROTOCOL_VERSION Packet implementation.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class IncompatibleProtocolVersionPacket extends RakNetPacket {
 

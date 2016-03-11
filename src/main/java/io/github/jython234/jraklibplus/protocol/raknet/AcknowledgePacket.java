@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * Base class for ACK/NACK
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public abstract class AcknowledgePacket extends RakNetPacket {
 

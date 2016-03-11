@@ -25,7 +25,7 @@ import io.github.jython234.jraklibplus.nio.Buffer;
 /**
  * Implementation of an EncapsulatedPacket contained in a CustomPacket.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class EncapsulatedPacket extends RakNetPacket {
 

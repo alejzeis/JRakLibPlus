@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Custom Packet Encode/Decode implementation.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public abstract class CustomPacket extends RakNetPacket {
 

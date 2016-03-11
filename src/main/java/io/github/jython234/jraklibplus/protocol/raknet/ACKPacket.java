@@ -24,7 +24,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * Created by jython234 on 9/12/2015.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class ACKPacket extends AcknowledgePacket {
 
