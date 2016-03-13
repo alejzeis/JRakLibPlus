@@ -18,9 +18,12 @@
  * along with JRakLibPlus.  If not, see <http://www.gnu.org/licenses/>.
  */
 import io.github.jython234.jraklibplus.protocol.raknet.CustomPackets;
+import io.github.jython234.jraklibplus.server.RakNetServer;
+import io.github.jython234.jraklibplus.server.ThreadedRakNetServer;
 
 
 import javax.xml.bind.DatatypeConverter;
+import java.net.InetSocketAddress;
 import java.util.regex.Pattern;
 
 /**
@@ -31,10 +34,14 @@ import java.util.regex.Pattern;
 public class TestServer {
 
     public static void main(String[] args) {
-
+        RakNetServer.ServerOptions options = new RakNetServer.ServerOptions();
+        RakNetServer server = new RakNetServer(new InetSocketAddress("0.0.0.0", 19132), options);
+        //RakNetServer server = new ThreadedRakNetServer(new InetSocketAddress("0.0.0.0", 19132), options);
+        server.start();
 
         CustomPackets.CustomPacket_0 c = new CustomPackets.CustomPacket_0();
         c.decode(DatatypeConverter.parseHexBinary("80 E2 00 00 60 01 11 9C 00 00 9A 00 00 00 9D 00 00 00 00 00 00 00 00 C0 3B EE 02 42 81 3D 71 40 CF FB 54 43 BC 9D 7C 43 BC 9D 7C 42 00 5B 6D 00 80 60 01 11 9D 00 00 9B 00 00 00 9D 00 00 00 00 00 00 00 00 C0 40 01 16 42 81 3D 71 40 D6 8D 02 43 BC 9D 7C 43 BC 9D 7C 42 00 5B 6D 00 80".replaceAll(Pattern.quote(" "), "")));
+        //while(true);
     }
 
 }

@@ -1,5 +1,6 @@
 package io.github.jython234.jraklibplus.server;
 
+import io.github.jython234.jraklibplus.JRakLibPlus;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,6 +9,11 @@ import org.slf4j.LoggerFactory;
 
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * An implementation of a RakNet game server. This implementation
@@ -30,9 +36,12 @@ public class RakNetServer {
     @Getter private int sendBufferSize;
     @Getter private boolean portChecking;
     @Getter private boolean disconnectInvalidProtocols;
+    @Getter private boolean warnOnCantKeepUp;
 
     @Getter private InetSocketAddress bindAddress;
     private DatagramSocket socket;
+
+    private final Map<TaskInfo, Runnable> tasks = new HashMap<>();
 
     public RakNetServer(InetSocketAddress bindAddress, ServerOptions options) {
         this.bindAddress = bindAddress;
@@ -65,16 +74,75 @@ public class RakNetServer {
         this.running = false;
     }
 
-    private void run() {
+    protected void run() {
         this.logger.info("Server starting...");
+        if(bind()) {
+            this.logger.info("RakNetServer bound to "+bindAddress+", running on RakNet protocol "+ JRakLibPlus.RAKNET_PROTOCOL);
+            try {
+                while (running) {
+                    long start = System.currentTimeMillis();
+                    tick();
+                    long elapsed = System.currentTimeMillis() - start;
+                    if (elapsed >= 50) {
+                        if (this.warnOnCantKeepUp)
+                            this.logger.warn("Can't keep up, did the system time change or is the server overloaded? (" + elapsed + ">50)");
+                    } else {
+                        Thread.sleep(50 - elapsed);
+                    }
+                }
+            } catch (Exception e) {
+                this.logger.error("Fatal Exception, server has crashed! "+e.getClass().getName()+": "+e.getMessage());
+                e.printStackTrace();
+                stop();
+            }
+        }
 
         this.stopped = true;
+        this.logger.info("Server has stopped.");
+    }
+
+    private void tick() {
+        if(this.tasks.isEmpty()) return;
+        synchronized (this.tasks) {
+            List<TaskInfo> remove = new ArrayList<>();
+            this.tasks.keySet().stream().filter(ti -> (System.currentTimeMillis() - ti.registeredAt) >= ti.runIn).forEach(ti -> {
+                this.tasks.get(ti).run();
+                remove.add(ti);
+            });
+            remove.stream().forEach(this.tasks::remove);
+        }
+    }
+
+    private boolean bind() {
+        try {
+            this.socket = new DatagramSocket(this.bindAddress);
+        } catch (SocketException e) {
+            this.logger.error("Failed to bind "+e.getClass().getSimpleName()+": "+e.getMessage());
+            stop();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Adds a task to be ran in <code>runIn</code> milliseconds.
+     * @param runIn The amount of milliseconds from the current time
+     *              to run the task.
+     * @param r The task to be ran.
+     */
+    public void addTask(long runIn, Runnable r) {
+        synchronized (this.tasks) {
+            TaskInfo ti = new TaskInfo();
+            ti.runIn = runIn;
+            ti.registeredAt = System.currentTimeMillis();
+            this.tasks.put(ti, r);
+        }
     }
 
     /**
      * Options the server uses to setup
      */
-    public class ServerOptions {
+    public static class ServerOptions {
         public String broadcastName = "A JRakLibPlus Server.";
         /**
          * The maximum amount of packets to read and process per tick (20 ticks per second)
@@ -88,5 +156,14 @@ public class RakNetServer {
          * The server currently supports protocol 7
          */
         public boolean disconnectInvalidProtocol = true;
+        /**
+         * If to log warning messages when a tick takes longer than 50 milliseconds.
+         */
+        public boolean warnOnCantKeepUp = true;
+    }
+
+    private class TaskInfo {
+        public long registeredAt;
+        public long runIn;
     }
 }
