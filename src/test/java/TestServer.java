@@ -35,6 +35,7 @@ public class TestServer {
 
     public static void main(String[] args) {
         RakNetServer.ServerOptions options = new RakNetServer.ServerOptions();
+        options.broadcastName = "MCPE;A JRakLibPlus server;45;0.14.0;-1;0";
         RakNetServer server = new RakNetServer(new InetSocketAddress("0.0.0.0", 19132), options);
         //RakNetServer server = new ThreadedRakNetServer(new InetSocketAddress("0.0.0.0", 19132), options);
         server.start();
