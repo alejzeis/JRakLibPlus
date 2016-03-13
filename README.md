@@ -1,5 +1,5 @@
 # JRakLibPlus
-An enhanced port of PHP RakLib, based on JRakLib
+A library for easy creation of RakNet servers, based on RakLib and JRakLib.
 
 ##### Currently supported features:
  - Base RakNet protocol 7
