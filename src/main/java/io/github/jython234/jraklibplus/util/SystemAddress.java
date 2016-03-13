@@ -46,6 +46,10 @@ public class SystemAddress {
         return null;
     }
 
+    public InetSocketAddress toSocketAddress() {
+        return new InetSocketAddress(ipAddress, port);
+    }
+
     public int getPort() {
         return port;
     }

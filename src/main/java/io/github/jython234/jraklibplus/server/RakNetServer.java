@@ -190,6 +190,9 @@ public class RakNetServer {
                 pong2.identifier = this.broadcastName;
                 addPacketToQueue(pong2, packet.getSocketAddress());
                 break;
+            default:
+
+                break;
         }
     }
 
