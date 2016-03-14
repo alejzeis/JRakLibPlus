@@ -23,6 +23,7 @@ public class Session {
 
     @Getter private SystemAddress address;
     @Getter private int state;
+    @Getter private int mtu;
 
     public Session(SystemAddress address, RakNetServer server) {
         this.address = address;
@@ -45,6 +46,7 @@ public class Session {
                         ipvp.serverID = this.server.getServerID();
                         this.server.addPacketToQueue(ipvp, address.toSocketAddress());
                     }
+                    this.mtu = req1.nullPayloadLength;
                 }
                 break;
         }
