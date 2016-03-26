@@ -1,3 +1,22 @@
+/**
+ * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
+ * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
+
+ * This file is part of JRakLibPlus.
+ *
+ * JRakLibPlus is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JRakLibPlus is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with JRakLibPlus.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package io.github.jython234.jraklibplus.server;
 
 import io.github.jython234.jraklibplus.JRakLibPlus;
@@ -6,6 +25,7 @@ import io.github.jython234.jraklibplus.protocol.raknet.AdvertiseSystemPacket;
 import io.github.jython234.jraklibplus.protocol.raknet.ConnectedPingOpenConnectionsPacket;
 import io.github.jython234.jraklibplus.protocol.raknet.UnconnectedPingOpenConnectionsPacket;
 import io.github.jython234.jraklibplus.protocol.raknet.UnconnectedPongOpenConnectionsPacket;
+import io.github.jython234.jraklibplus.util.SystemAddress;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -36,6 +56,7 @@ public class RakNetServer {
     @Getter private int maxPacketsPerTick;
     @Getter private int receiveBufferSize;
     @Getter private int sendBufferSize;
+    @Getter private int packetTimeout;
     @Getter private boolean portChecking;
     @Getter private boolean disconnectInvalidProtocols;
     @Getter private long serverID;
@@ -44,6 +65,8 @@ public class RakNetServer {
     @Getter private InetSocketAddress bindAddress;
     private DatagramSocket socket;
     private final Queue<DatagramPacket> sendQueue = new ArrayDeque<>();
+
+    private final Map<String, Session> sessions = new HashMap<>();
 
     private final List<Runnable> shutdownTasks = new ArrayList<>();
     private final Map<TaskInfo, Runnable> tasks = new HashMap<>();
@@ -55,6 +78,7 @@ public class RakNetServer {
         this.maxPacketsPerTick = options.maxPacketsPerTick;
         this.receiveBufferSize = options.recvBufferSize;
         this.sendBufferSize = options.sendBufferSize;
+        this.packetTimeout = options.packetTimeout;
         this.portChecking = options.portChecking;
         this.disconnectInvalidProtocols = options.disconnectInvalidProtocol;
         this.serverID = options.serverID;
@@ -191,7 +215,16 @@ public class RakNetServer {
                 addPacketToQueue(pong2, packet.getSocketAddress());
                 break;
             default:
+                synchronized (this.sessions) {
+                    Session session;
+                    if(!this.sessions.containsKey(packet.getAddress().toString())) {
+                        session = new Session(SystemAddress.fromSocketAddress(packet.getSocketAddress()), this);
+                        this.sessions.put(packet.getAddress().toString(), session);
+                        this.logger.debug("Session opened from "+packet.getAddress().toString());
+                    } else session = this.sessions.get(packet.getAddress().toString());
 
+                    session.handlePacket(packet.getData());
+                }
                 break;
         }
     }
@@ -201,6 +234,12 @@ public class RakNetServer {
             byte[] buffer = packet.encode();
             this.sendQueue.add(new DatagramPacket(buffer, buffer.length, address));
         }
+    }
+
+    protected void onSessionClose(String reason, Session session) {
+        //TODO: event
+        this.logger.debug("Session "+session.getAddress().toString()+" disconnected: "+reason);
+        this.sessions.remove(session.getAddress().toSocketAddress().toString());
     }
 
     /**
@@ -239,6 +278,7 @@ public class RakNetServer {
         public int maxPacketsPerTick = 500;
         public int recvBufferSize = 4096;
         public int sendBufferSize = 4096;
+        public int packetTimeout = 5000;
         public boolean portChecking = true;
         /**
          * If this is true then the server will disconnect clients with invalid raknet protocols.
