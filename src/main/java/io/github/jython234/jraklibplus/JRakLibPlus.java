@@ -103,9 +103,9 @@ public class JRakLibPlus {
     }
 
     public static String printBytesAsHex(byte[] packet) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for(byte b : packet) {
-            sb.append(String.format("%02X", b)+" ");
+            sb.append(String.format("%02X", b)).append(" ");
         }
         return sb.toString();
     }

@@ -24,6 +24,7 @@ import io.github.jython234.jraklibplus.nio.Buffer;
 import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
 import io.github.jython234.jraklibplus.nio.NioBuffer;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
+import io.github.jython234.jraklibplus.protocol.minecraft.*;
 import io.github.jython234.jraklibplus.protocol.raknet.*;
 import io.github.jython234.jraklibplus.util.SystemAddress;
 import lombok.Getter;
@@ -57,7 +58,10 @@ public class Session {
     private int currentSeqNum = 0;
     private int lastSeqNum = 0;
     private int sendSeqNum = 0;
-    private final List<CustomPacket> sendQueue = new ArrayList<>();
+    private int messageIndex = 0;
+    private int splitID = 0;
+
+    private final CustomPacket sendQueue = new CustomPackets.CustomPacket_4();
     private final Map<Integer, CustomPacket> recoveryQueue = new HashMap<>();
     private final List<Integer> ACKQueue = new ArrayList<>();
     private final List<Integer> NACKQueue = new ArrayList<>();
@@ -69,17 +73,122 @@ public class Session {
 
         this.state = CONNECTING_1;
 
-        this.server.addTask(0, this::checkForTimeout);
+        this.server.addTask(0, this::update);
     }
 
-    private void checkForTimeout() {
+    private void update() {
+        if(state == DISCONNECTED) return;
         if((System.currentTimeMillis() - this.timeLastPacketReceived) >= this.server.getPacketTimeout()) {
             this.disconnect("timeout");
-        } else this.server.addTask(0, this::checkForTimeout);
+        } else {
+            synchronized (this.ACKQueue) {
+                if (!this.ACKQueue.isEmpty()) {
+                    ACKPacket ack = new ACKPacket();
+                    ack.packets = this.ACKQueue.stream().toArray(Integer[]::new);
+                    this.sendPacket(ack);
+                    this.ACKQueue.clear();
+                }
+            }
+            synchronized (this.NACKQueue) {
+                if (!this.NACKQueue.isEmpty()) {
+                    NACKPacket nack = new NACKPacket();
+                    nack.packets = this.NACKQueue.stream().toArray(Integer[]::new);
+                    this.sendPacket(nack);
+                    this.NACKQueue.clear();
+                }
+            }
+
+            this.sendQueuedPackets();
+
+            //TODO:
+            /*
+            synchronized (this.epSendQueue) {
+                if(!this.epSendQueue.isEmpty()) {
+                    int pkLimit = 8;
+                    CustomPacket cp = new CustomPackets.CustomPacket_4();
+                    for(EncapsulatedPacket pk : this.epSendQueue) {
+                        cp.packets.add(pk);
+                    }
+                }
+            }
+            */
+
+            this.server.addTask(0, this::update);
+        }
+    }
+
+    private void sendQueuedPackets() {
+        synchronized (this.sendQueue) {
+            if(!this.sendQueue.packets.isEmpty()) {
+                this.sendQueue.sequenceNumber = this.sendSeqNum++;
+                this.sendPacket(this.sendQueue);
+                synchronized (this.recoveryQueue) { this.recoveryQueue.put(this.sendQueue.sequenceNumber, this.sendQueue); }
+
+                this.sendQueue.packets.clear();
+            }
+        }
     }
 
     public void sendPacket(RakNetPacket packet) {
         this.server.addPacketToQueue(packet, this.address.toSocketAddress());
+    }
+
+    public void addPacketToQueue(EncapsulatedPacket pkt, boolean immediate) {
+        switch (pkt.reliability) {
+            case RELIABLE:
+            case RELIABLE_ORDERED:
+                //TODO: OrderIndex
+            case RELIABLE_SEQUENCED:
+            case RELIABLE_WITH_ACK_RECEIPT:
+            case RELIABLE_ORDERED_WITH_ACK_RECEIPT:
+                pkt.messageIndex = this.messageIndex++;
+                break;
+        }
+
+        if(pkt.getSize() + 4 > this.mtu) { // Too big to be sent in one packet, need to be split
+            byte[][] buffers = JRakLibPlus.splitByteArray(pkt.payload, this.mtu - 34);
+            int splitID = (this.splitID++) % 65536;
+            for(int count = 0; count < buffers.length; count++) {
+                EncapsulatedPacket ep = new EncapsulatedPacket();
+                ep.splitID = splitID;
+                ep.split = true;
+                ep.splitCount = buffers.length;
+                ep.reliability = pkt.reliability;
+                ep.splitIndex = count;
+                ep.payload = buffers[count];
+
+                if(count > 0) {
+                    ep.messageIndex = this.messageIndex++;
+                } else {
+                    ep.messageIndex = pkt.messageIndex;
+                }
+                if(ep.reliability == Reliability.RELIABLE_ORDERED) {
+                    ep.orderChannel = pkt.orderChannel;
+                    ep.orderIndex = pkt.orderIndex;
+                }
+
+                this.addToQueue(ep, true);
+            }
+        } else {
+            this.addToQueue(pkt, immediate);
+        }
+    }
+
+    private void addToQueue(EncapsulatedPacket pkt, boolean immediate) {
+        if(immediate) {
+            CustomPacket cp = new CustomPackets.CustomPacket_0();
+            cp.packets.add(pkt);
+            cp.sequenceNumber = this.sendSeqNum++;
+            this.sendPacket(cp);
+            synchronized (this.recoveryQueue) { this.recoveryQueue.put(cp.sequenceNumber, cp); }
+        } else {
+            if((this.sendQueue.getSize() + pkt.getSize()) > this.mtu) {
+                this.sendQueuedPackets();
+            }
+            synchronized (this.sendQueue) {
+                this.sendQueue.packets.add(pkt);
+            }
+        }
     }
 
     public void handlePacket(byte[] data) {
@@ -159,7 +268,7 @@ public class Session {
                         if(this.recoveryQueue.containsKey(seq)) {
                             CustomPacket pk = this.recoveryQueue.get(seq);
                             pk.sequenceNumber = this.sendSeqNum++;
-                            this.sendQueue.add(pk);
+                            this.sendPacket(pk);
                             this.recoveryQueue.remove(seq);
                         }
                     }
@@ -167,8 +276,10 @@ public class Session {
                 break;
             default:
                 if(this.state == CONNECTED || this.state == HANDSHAKING) {
+                    //noinspection ConstantConditions
                     if(data[0] >= JRakLibPlus.CUSTOM_PACKET_0 && data[0] <= JRakLibPlus.CUSTOM_PACKET_F) {
                         this.handleDataPacket(data);
+                        break;
                     }
                 }
                 this.server.getLogger().debug("Unknown packet received: "+String.format("%02X", data[0]));
@@ -182,10 +293,12 @@ public class Session {
 
         int diff = pk.sequenceNumber - this.lastSeqNum;
         synchronized (this.NACKQueue) {
-            this.NACKQueue.remove(pk.sequenceNumber);
-            if(diff != 1) {
-                for(int i = this.lastSeqNum + 1; i < pk.sequenceNumber; i++) {
-                    this.NACKQueue.add(i);
+            if(!this.NACKQueue.isEmpty()) {
+                this.NACKQueue.remove(pk.sequenceNumber);
+                if (diff != 1) {
+                    for (int i = this.lastSeqNum + 1; i < pk.sequenceNumber; i++) {
+                        this.NACKQueue.add(i);
+                    }
                 }
             }
         }
@@ -195,9 +308,7 @@ public class Session {
             this.lastSeqNum = pk.sequenceNumber;
         }
 
-        for(EncapsulatedPacket ep : pk.packets) {
-            this.handleEncapsulatedPacket(ep);
-        }
+        pk.packets.forEach(this::handleEncapsulatedPacket);
 
     }
 
@@ -238,14 +349,84 @@ public class Session {
         }
     }
 
+
     private void handleEncapsulatedPacket(EncapsulatedPacket pk) {
+        if(!(this.state == CONNECTED || this.state == HANDSHAKING)) return;
         if(pk.split && this.state == CONNECTED) {
             this.handleSplitPacket(pk);
+        }
+
+        switch (pk.payload[0]) {
+            case JRakLibPlus.MC_DISCONNECT_NOTIFICATION:
+                this.disconnect("client disconnected");
+                break;
+            case JRakLibPlus.MC_CLIENT_CONNECT:
+                ClientConnectPacket ccp = new ClientConnectPacket();
+                ccp.decode(pk.payload);
+
+                ServerHandshakePacket shp = new ServerHandshakePacket();
+                shp.address = this.address;
+                shp.sendPing = ccp.sendPing;
+                shp.sendPong = ccp.sendPing + 1000L;
+
+                EncapsulatedPacket ep = new EncapsulatedPacket();
+                ep.reliability = Reliability.UNRELIABLE;
+                ep.payload = shp.encode();
+                this.addToQueue(ep, true);
+                break;
+
+            case JRakLibPlus.MC_CLIENT_HANDSHAKE:
+                if(this.server.isPortChecking()) {
+                    ClientHandshakePacket chp = new ClientHandshakePacket();
+                    chp.decode(pk.payload);
+                    if(chp.address.getPort() != this.server.getBindAddress().getPort()) {
+                        this.disconnect("Invalid Port");
+                    }
+                }
+                this.state = CONNECTED;
+
+                /*
+                PingPacket ping2 = new PingPacket();
+                ping2.pingID = System.currentTimeMillis();
+
+                EncapsulatedPacket ep3 = new EncapsulatedPacket();
+                ep3.reliability = Reliability.UNRELIABLE;
+                ep3.payload = ping2.encode();
+                this.addToQueue(ep3, true);
+                this.server.getLogger().debug("Ping: "+ping2.pingID);
+                */
+                break;
+
+            case JRakLibPlus.MC_PING:
+                PingPacket ping = new PingPacket();
+                ping.decode(pk.payload);
+
+                PongPacket pong = new PongPacket();
+                pong.pingID = ping.pingID;
+
+                EncapsulatedPacket ep2 = new EncapsulatedPacket();
+                ep2.reliability = Reliability.UNRELIABLE;
+                ep2.payload = pong.encode();
+                this.addToQueue(ep2, true);
+                break;
+
+            case JRakLibPlus.MC_PONG:
+                PongPacket pong2 = new PongPacket();
+                pong2.decode(pk.payload);
+
+                //this.server.getLogger().debug("Pong: "+pong2.pingID);
+                break;
         }
     }
 
     public void disconnect(String reason) {
-        //TODO Send Encap packet
+        EncapsulatedPacket ep = new EncapsulatedPacket();
+        ep.reliability = Reliability.UNRELIABLE;
+        ep.payload = new DisconnectNotificationPacket().encode();
+        this.addToQueue(ep, true);
+
+        this.state = DISCONNECTED;
+
         this.server.onSessionClose(reason, this);
     }
 }
