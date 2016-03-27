@@ -217,11 +217,11 @@ public class RakNetServer {
             default:
                 synchronized (this.sessions) {
                     Session session;
-                    if(!this.sessions.containsKey(packet.getAddress().toString())) {
+                    if(!this.sessions.containsKey(packet.getAddress().toString()+":"+packet.getPort())) {
                         session = new Session(SystemAddress.fromSocketAddress(packet.getSocketAddress()), this);
-                        this.sessions.put(packet.getAddress().toString(), session);
+                        this.sessions.put("/" + session.getAddress().toString(), session);
                         this.logger.debug("Session opened from "+packet.getAddress().toString());
-                    } else session = this.sessions.get(packet.getAddress().toString());
+                    } else session = this.sessions.get(packet.getAddress().toString() + ":" + packet.getPort());
 
                     session.handlePacket(packet.getData());
                 }
@@ -239,7 +239,7 @@ public class RakNetServer {
     protected void onSessionClose(String reason, Session session) {
         //TODO: event
         this.logger.debug("Session "+session.getAddress().toString()+" disconnected: "+reason);
-        this.sessions.remove(session.getAddress().toSocketAddress().toString());
+        this.sessions.remove("/" + session.getAddress().toString());
     }
 
     /**
