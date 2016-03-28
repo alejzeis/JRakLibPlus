@@ -55,9 +55,9 @@ public class Session {
     @Getter private long clientID;
     @Getter private long timeLastPacketReceived;
 
-    private int currentSeqNum = 0;
-    private int lastSeqNum = 0;
+    private int lastSeqNum = -1;
     private int sendSeqNum = 0;
+
     private int messageIndex = 0;
     private int splitID = 0;
 
@@ -65,7 +65,7 @@ public class Session {
     private final Map<Integer, CustomPacket> recoveryQueue = new HashMap<>();
     private final List<Integer> ACKQueue = new ArrayList<>();
     private final List<Integer> NACKQueue = new ArrayList<>();
-    private final Map<Integer, List<EncapsulatedPacket>> splitQueue = new HashMap<>();
+    private final Map<Integer, Map<Integer, EncapsulatedPacket>> splitQueue = new HashMap<>();
 
     public Session(SystemAddress address, RakNetServer server) {
         this.address = address;
@@ -197,7 +197,7 @@ public class Session {
 
         switch (data[0]) {
             case JRakLibPlus.ID_OPEN_CONNECTION_REQUEST_1:
-                if(this.state == CONNECTING_1) {
+                if(this.state == CONNECTING_1 || this.state == CONNECTING_2) {
                     OpenConnectionRequest1Packet req1 = new OpenConnectionRequest1Packet();
                     req1.decode(data);
 
@@ -320,20 +320,20 @@ public class Session {
         synchronized (this.splitQueue) {
             if (!this.splitQueue.containsKey(pk.splitID)) {
                 if (this.splitQueue.size() >= this.MAX_SPLIT_COUNT) return; //Too many split packets in the queue will increase memory usage
-                List<EncapsulatedPacket> l = new ArrayList<>();
-                l.add(pk.splitIndex, pk);
-                this.splitQueue.put(pk.splitID, l);
+                Map<Integer, EncapsulatedPacket> m = new HashMap<>();
+                m.put(pk.splitIndex, pk);
+                this.splitQueue.put(pk.splitID, m);
             } else {
-                List<EncapsulatedPacket> l = this.splitQueue.get(pk.splitID);
-                l.add(pk.splitIndex, pk);
-                this.splitQueue.put(pk.splitID, l);
+                Map<Integer, EncapsulatedPacket> m = this.splitQueue.get(pk.splitID);
+                m.put(pk.splitIndex, pk);
+                this.splitQueue.put(pk.splitID, m);
             }
 
             if(this.splitQueue.get(pk.splitID).size() == pk.splitCount) {
                 EncapsulatedPacket ep = new EncapsulatedPacket();
                 Buffer b = JavaByteBuffer.allocate(1024 * 1024, ByteOrder.BIG_ENDIAN);
                 int size = 0;
-                List<EncapsulatedPacket> packets = this.splitQueue.get(pk.splitID);
+                Map<Integer, EncapsulatedPacket> packets = this.splitQueue.get(pk.splitID);
                 for(int i = 0; i < pk.splitCount; i++) {
                     b.put(packets.get(i).payload);
                     size = size + packets.get(i).payload.length;

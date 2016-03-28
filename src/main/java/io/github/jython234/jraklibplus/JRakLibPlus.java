@@ -68,8 +68,9 @@ public class JRakLibPlus {
     public static final byte CUSTOM_PACKET_E = (byte) 0x8E;
     public static final byte CUSTOM_PACKET_F = (byte) 0x8F;
 
-    public static final byte ACK = (byte) 0xA0;
-    public static final byte NACK = (byte) 0xC0;
+    public static final byte ACK = (byte) 0xC0;
+    public static final byte NACK = (byte) 0xA0;
+    //public static final byte NACK = (byte) 0x04;
 
     public static final byte MC_PING = 0x00;
     public static final byte MC_PONG = 0x03;
