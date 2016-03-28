@@ -82,6 +82,7 @@ public class RakNetServer {
         this.portChecking = options.portChecking;
         this.disconnectInvalidProtocols = options.disconnectInvalidProtocol;
         this.serverID = options.serverID;
+        this.warnOnCantKeepUp = options.warnOnCantKeepUp;
 
         this.logger = LoggerFactory.getLogger("JRakLibPlus Server");
 
