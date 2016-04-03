@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,12 +19,12 @@
  */
 package io.github.jython234.jraklibplus.protocol.raknet;
 
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
+import static io.github.jython234.jraklibplus.JRakLibPlus.ACK;
 
 /**
  * Created by jython234 on 9/12/2015.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class ACKPacket extends AcknowledgePacket {
 

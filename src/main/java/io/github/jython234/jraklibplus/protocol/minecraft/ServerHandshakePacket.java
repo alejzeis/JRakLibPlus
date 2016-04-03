@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -22,17 +22,18 @@ package io.github.jython234.jraklibplus.protocol.minecraft;
 import io.github.jython234.jraklibplus.nio.Buffer;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.util.SystemAddress;
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
+
+import static io.github.jython234.jraklibplus.JRakLibPlus.MC_SERVER_HANDSHAKE;
 
 /**
  * MC_SERVER_HANDSHAKE Packet implementation
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class ServerHandshakePacket extends RakNetPacket {
 
     public SystemAddress address;
-    public SystemAddress[] systemAddresses = new SystemAddress[] {
+    public SystemAddress[] systemAddresses = new SystemAddress[]{
             new SystemAddress("127.0.0.1", 0, 4),
             new SystemAddress("0.0.0.0", 0, 4),
             new SystemAddress("0.0.0.0", 0, 4),
@@ -51,7 +52,7 @@ public class ServerHandshakePacket extends RakNetPacket {
     protected void _encode(Buffer buffer) {
         buffer.putAddress(address);
         buffer.putShort((short) 0);
-        for(SystemAddress a : systemAddresses) {
+        for (SystemAddress a : systemAddresses) {
             buffer.putAddress(a);
         }
         buffer.putLong(sendPing);
@@ -63,7 +64,7 @@ public class ServerHandshakePacket extends RakNetPacket {
         buffer.getAddress();
         buffer.skip(2); //short
         systemAddresses = new SystemAddress[10];
-        for(int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             systemAddresses[i] = buffer.getAddress();
         }
         sendPing = buffer.getLong();

@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,12 +19,12 @@
  */
 package io.github.jython234.jraklibplus.protocol.raknet;
 
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
+import static io.github.jython234.jraklibplus.JRakLibPlus.ID_ADVERTISE_SYSTEM;
 
 /**
  * ID_ADVERTISE_SYSTEM Packet implementation.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class AdvertiseSystemPacket extends UnconnectedPongOpenConnectionsPacket {
 

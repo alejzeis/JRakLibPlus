@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
  *
  * @author jython234
  */
-public class NioBuffer implements Buffer{
+public class NioBuffer implements Buffer {
     private byte[] buffer;
     private ByteOrder order;
     private int position;
@@ -66,13 +66,13 @@ public class NioBuffer implements Buffer{
 
     @Override
     public byte[] get(int len) {
-        if(getRemainingBytes() < len) {
+        if (getRemainingBytes() < len) {
             throw new BufferUnderflowException();
         }
         byte[] data = new byte[len];
         //int offset = position == 0 ? 0 : 1;
         int offset = 0;
-        for(int i = 0; i < len; i++) {
+        for (int i = 0; i < len; i++) {
             data[i] = buffer[position + offset];
             offset++;
         }
@@ -82,9 +82,9 @@ public class NioBuffer implements Buffer{
 
     @Override
     public void put(byte[] bytes) {
-        if((buffer.length - position) < bytes.length) {
+        if ((buffer.length - position) < bytes.length) {
             byte[] data = buffer;
-            buffer = new byte[bytes.length+data.length];
+            buffer = new byte[bytes.length + data.length];
             position = 0;
             put(data);
             put(bytes);
@@ -92,7 +92,7 @@ public class NioBuffer implements Buffer{
         }
         //int offset = position == 0 ? 0 : 1;
         int offset = 0;
-        for(int i = 0; i < bytes.length; i++) {
+        for (int i = 0; i < bytes.length; i++) {
             buffer[position + offset] = bytes[i];
             offset++;
         }
@@ -137,15 +137,15 @@ public class NioBuffer implements Buffer{
     @Override
     public SystemAddress getAddress() {
         int version = getByte();
-        if(version == 4) {
-            String address = ((~getByte()) & 0xff) +"."+ ((~getByte()) & 0xff) +"."+ ((~getByte()) & 0xff) +"."+ ((~getByte()) & 0xff);
+        if (version == 4) {
+            String address = ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff);
             int port = getUnsignedShort();
             return new SystemAddress(address, port, version);
-        } else if(version == 6) {
+        } else if (version == 6) {
             //TODO: IPv6 Decode
             throw new UnsupportedOperationException("Can't read IPv6 address: Not Implemented");
         } else {
-            throw new UnsupportedOperationException("Can't read IPv"+version+" address: unknown");
+            throw new UnsupportedOperationException("Can't read IPv" + version + " address: unknown");
         }
     }
 
@@ -156,7 +156,7 @@ public class NioBuffer implements Buffer{
 
     @Override
     public void putByte(byte b) {
-        put(new byte[] {b});
+        put(new byte[]{b});
     }
 
     @Override
@@ -171,11 +171,11 @@ public class NioBuffer implements Buffer{
 
     @Override
     public void putLTriad(int t) {
-        byte b1,b2,b3;
-        b3 = (byte)(t & 0xFF);
-        b2 = (byte)((t >> 8) & 0xFF);
-        b1 = (byte)((t >> 16) & 0xFF);
-        put(new byte[] {b3, b2, b1});
+        byte b1, b2, b3;
+        b3 = (byte) (t & 0xFF);
+        b2 = (byte) ((t >> 8) & 0xFF);
+        b1 = (byte) ((t >> 16) & 0xFF);
+        put(new byte[]{b3, b2, b1});
     }
 
     @Override
@@ -196,11 +196,11 @@ public class NioBuffer implements Buffer{
 
     @Override
     public void putAddress(SystemAddress address) {
-        if(address.getVersion() != 4) {
-            throw new UnsupportedOperationException("Can't put IPv"+address.getVersion()+": not implemented");
+        if (address.getVersion() != 4) {
+            throw new UnsupportedOperationException("Can't put IPv" + address.getVersion() + ": not implemented");
         }
         putByte((byte) address.getVersion());
-        for(String part : address.getIpAddress().split(Pattern.quote("."))) {
+        for (String part : address.getIpAddress().split(Pattern.quote("."))) {
             putByte((byte) ((byte) ~(Integer.parseInt(part)) & 0xFF));
         }
         putUnsignedShort(address.getPort());

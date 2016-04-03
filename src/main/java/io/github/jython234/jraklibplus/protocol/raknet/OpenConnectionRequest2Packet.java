@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,15 +19,17 @@
  */
 package io.github.jython234.jraklibplus.protocol.raknet;
 
-import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.util.SystemAddress;
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
+
+import static io.github.jython234.jraklibplus.JRakLibPlus.ID_OPEN_CONNECTION_REQUEST_2;
+import static io.github.jython234.jraklibplus.JRakLibPlus.RAKNET_MAGIC;
 
 /**
  * ID_OPEN_CONNECTION_REQUEST_2 Packet Implementation
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class OpenConnectionRequest2Packet extends RakNetPacket {
 

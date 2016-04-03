@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,22 +19,31 @@
  */
 package io.github.jython234.jraklibplus.server;
 
-import java.util.concurrent.ThreadFactory;
+import java.net.InetSocketAddress;
 
 /**
- * Created by jython234 on 9/12/2015.
+ * A RakNetServer that runs in a separate thread.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
-public class NioThreadFactory implements ThreadFactory {
-    private int i = 1;
+public class ThreadedRakNetServer extends RakNetServer {
+    private Thread thread;
+
+    public ThreadedRakNetServer(InetSocketAddress bindAddress, ServerOptions options) {
+        super(bindAddress, options);
+        this.thread = new Thread(super::run, "RakNetServer");
+    }
+
+    /**
+     * Starts the server in a new Thread.
+     */
+    @Override
+    public void start() {
+        super.start();
+    }
 
     @Override
-    public Thread newThread(Runnable r) {
-        Thread t = new Thread(r);
-        t.setName("NioWorkerThread-"+i);
-        t.setPriority(Thread.MAX_PRIORITY);
-        i++;
-        return t;
+    protected void run() {
+        this.thread.start();
     }
 }

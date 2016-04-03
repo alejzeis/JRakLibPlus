@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,8 +19,8 @@
  */
 package io.github.jython234.jraklibplus.protocol.raknet;
 
-import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Custom Packet Encode/Decode implementation.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public abstract class CustomPacket extends RakNetPacket {
 
@@ -54,7 +54,7 @@ public abstract class CustomPacket extends RakNetPacket {
     @Override
     public int getSize() {
         int len = 4;
-        for(EncapsulatedPacket packet : packets) {
+        for (EncapsulatedPacket packet : packets) {
             len = len + packet.getSize();
         }
         return len;

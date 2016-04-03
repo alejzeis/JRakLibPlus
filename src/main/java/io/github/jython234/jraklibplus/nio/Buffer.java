@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -25,7 +25,7 @@ import io.github.jython234.jraklibplus.util.SystemAddress;
  * Represents a Buffer that can hold bytes. The Buffer can read and write all
  * RakNet data types.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public interface Buffer {
     /**

@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 /**
  * A Buffer implementation that wraps around a ByteBuffer
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class JavaByteBuffer implements Buffer {
     private ByteBuffer buffer;
@@ -99,15 +99,15 @@ public class JavaByteBuffer implements Buffer {
     @Override
     public SystemAddress getAddress() {
         int version = getByte();
-        if(version == 4) {
-            String address = ((~getByte()) & 0xff) +"."+ ((~getByte()) & 0xff) +"."+ ((~getByte()) & 0xff) +"."+ ((~getByte()) & 0xff);
+        if (version == 4) {
+            String address = ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff);
             int port = getUnsignedShort();
             return new SystemAddress(address, port, version);
-        } else if(version == 6) {
+        } else if (version == 6) {
             //TODO: IPv6 Decode
             throw new UnsupportedOperationException("Can't read IPv6 address: Not Implemented");
         } else {
-            throw new UnsupportedOperationException("Can't read IPv"+version+" address: unknown");
+            throw new UnsupportedOperationException("Can't read IPv" + version + " address: unknown");
         }
     }
 
@@ -133,11 +133,11 @@ public class JavaByteBuffer implements Buffer {
 
     @Override
     public void putLTriad(int t) {
-        byte b1,b2,b3;
-        b3 = (byte)(t & 0xFF);
-        b2 = (byte)((t >> 8) & 0xFF);
-        b1 = (byte)((t >> 16) & 0xFF);
-        put(new byte[] {b3, b2, b1});
+        byte b1, b2, b3;
+        b3 = (byte) (t & 0xFF);
+        b2 = (byte) ((t >> 8) & 0xFF);
+        b1 = (byte) ((t >> 16) & 0xFF);
+        put(new byte[]{b3, b2, b1});
     }
 
     @Override
@@ -158,11 +158,11 @@ public class JavaByteBuffer implements Buffer {
 
     @Override
     public void putAddress(SystemAddress address) {
-        if(address.getVersion() != 4) {
-            throw new UnsupportedOperationException("Can't put IPv"+address.getVersion()+": not implemented");
+        if (address.getVersion() != 4) {
+            throw new UnsupportedOperationException("Can't put IPv" + address.getVersion() + ": not implemented");
         }
         putByte((byte) address.getVersion());
-        for(String part : address.getIpAddress().split(Pattern.quote("."))) {
+        for (String part : address.getIpAddress().split(Pattern.quote("."))) {
             putByte((byte) ((byte) ~(Integer.parseInt(part)) & 0xFF));
         }
         putUnsignedShort(address.getPort());

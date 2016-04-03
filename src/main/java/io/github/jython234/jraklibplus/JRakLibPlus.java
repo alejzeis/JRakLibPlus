@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -21,10 +21,7 @@ package io.github.jython234.jraklibplus;
 
 import org.slf4j.Logger;
 
-import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * JRakLibPlus Constants
@@ -35,11 +32,11 @@ public class JRakLibPlus {
     public static final String LIBRARY_VERSION = "1.0-SNAPSHOT";
 
     public static final int RAKNET_PROTOCOL = 7;
-    public static final byte[] RAKNET_MAGIC = new byte[] {
+    public static final byte[] RAKNET_MAGIC = new byte[]{
             0x00, (byte) 0xff, (byte) 0xff, 0x00,
             (byte) 0xfe, (byte) 0xfe, (byte) 0xfe, (byte) 0xfe,
             (byte) 0xfd, (byte) 0xfd, (byte) 0xfd, (byte) 0xfd,
-            0x12, 0x34, 0x56, 0x78 };
+            0x12, 0x34, 0x56, 0x78};
 
     public static final byte ID_CONNECTED_PING_OPEN_CONNECTIONS = 0x01;
     public static final byte ID_UNCONNECTED_PING_OPEN_CONNECTIONS = 0x02;
@@ -68,8 +65,9 @@ public class JRakLibPlus {
     public static final byte CUSTOM_PACKET_E = (byte) 0x8E;
     public static final byte CUSTOM_PACKET_F = (byte) 0x8F;
 
-    public static final byte ACK = (byte) 0xA0;
-    public static final byte NACK = (byte) 0xC0;
+    public static final byte ACK = (byte) 0xC0;
+    public static final byte NACK = (byte) 0xA0;
+    //public static final byte NACK = (byte) 0x04;
 
     public static final byte MC_PING = 0x00;
     public static final byte MC_PONG = 0x03;
@@ -80,7 +78,7 @@ public class JRakLibPlus {
     public static final byte MC_DISCONNECT_NOTIFICATION = 0x15;
 
     public static void printExceptionToLogger(Logger logger, Exception e) {
-        for(StackTraceElement element : e.getStackTrace()) {
+        for (StackTraceElement element : e.getStackTrace()) {
             logger.error(element.toString());
         }
     }
@@ -88,8 +86,8 @@ public class JRakLibPlus {
     public static byte[][] splitByteArray(byte[] array, int chunkSize) {
         byte[][] splits = new byte[1024][chunkSize];
         int chunks = 0;
-        for(int i=0;i<array.length;i+=chunkSize){
-            if((array.length - i) > chunkSize){
+        for (int i = 0; i < array.length; i += chunkSize) {
+            if ((array.length - i) > chunkSize) {
                 splits[chunks] = Arrays.copyOfRange(array, i, i + chunkSize);
             } else {
                 splits[chunks] = Arrays.copyOfRange(array, i, array.length);
@@ -103,9 +101,9 @@ public class JRakLibPlus {
     }
 
     public static String printBytesAsHex(byte[] packet) {
-        StringBuffer sb = new StringBuffer();
-        for(byte b : packet) {
-            sb.append(String.format("%02X", b)+" ");
+        StringBuilder sb = new StringBuilder();
+        for (byte b : packet) {
+            sb.append(String.format("%02X", b)).append(" ");
         }
         return sb.toString();
     }

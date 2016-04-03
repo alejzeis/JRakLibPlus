@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -24,7 +24,7 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.*;
 /**
  * Contains all CustomPacket implementations
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class CustomPackets {
 

@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,299 +19,348 @@
  */
 package io.github.jython234.jraklibplus.server;
 
-
 import io.github.jython234.jraklibplus.JRakLibPlus;
-import io.github.jython234.jraklibplus.nio.Buffer;
-import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
-import io.github.jython234.jraklibplus.protocol.minecraft.*;
-import io.github.jython234.jraklibplus.protocol.raknet.*;
-
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
-
+import io.github.jython234.jraklibplus.protocol.raknet.AdvertiseSystemPacket;
+import io.github.jython234.jraklibplus.protocol.raknet.ConnectedPingOpenConnectionsPacket;
+import io.github.jython234.jraklibplus.protocol.raknet.UnconnectedPingOpenConnectionsPacket;
+import io.github.jython234.jraklibplus.protocol.raknet.UnconnectedPongOpenConnectionsPacket;
 import io.github.jython234.jraklibplus.util.SystemAddress;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.SocketException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.DatagramChannel;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.*;
+import java.net.*;
+import java.util.*;
 
 /**
- * An implementation of a Minecraft: Pocket Edition RakNet server
+ * An implementation of a RakNet game server. This implementation
+ * runs on a single thread.
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
-public class RakNetServer extends Thread {
+public class RakNetServer {
+    @Getter private boolean running = false;
+    /**
+     * If true then the server has stopped and finished
+     * it's last tick.
+     */
+    @Getter private boolean stopped = true;
+    @Getter(AccessLevel.PROTECTED) private Logger logger;
 
-    public final long serverID;
-    private final ServerInterface server;
+    @Getter
+    @Setter
+    private String broadcastName;
+    @Getter private int maxPacketsPerTick;
+    @Getter private int receiveBufferSize;
+    @Getter private int sendBufferSize;
+    @Getter private int packetTimeout;
+    @Getter private boolean portChecking;
+    @Getter private boolean disconnectInvalidProtocols;
+    @Getter private long serverID;
+    @Getter private boolean warnOnCantKeepUp;
 
-    private boolean running = false;
+    @Getter private InetSocketAddress bindAddress;
+    @Getter private HookManager hookManager;
 
-    protected DatagramChannel channel;
-    protected ExecutorService workers;
-    private ServerOptions options;
-    private Logger logger;
+    private DatagramSocket socket;
+    private final Queue<DatagramPacket> sendQueue = new ArrayDeque<>();
 
-    private long lastTick;
+    private final Map<String, Session> sessions = new HashMap<>();
 
-    private static Map<Byte, Class<? extends RakNetPacket>> packets = new ConcurrentHashMap<>();
-    private Queue<UnknownPacket> packetQueue = new ConcurrentLinkedQueue<>();
-    private Map<String, NioSession> sessions = new ConcurrentHashMap<>();
+    private final List<Runnable> shutdownTasks = new ArrayList<>();
+    private final Map<TaskInfo, Runnable> tasks = new HashMap<>();
+
+    private final Map<String, Long[]> blacklist = new HashMap<>();
+
+    public RakNetServer(InetSocketAddress bindAddress, ServerOptions options) {
+        this.bindAddress = bindAddress;
+
+        this.broadcastName = options.broadcastName;
+        this.maxPacketsPerTick = options.maxPacketsPerTick;
+        this.receiveBufferSize = options.recvBufferSize;
+        this.sendBufferSize = options.sendBufferSize;
+        this.packetTimeout = options.packetTimeout;
+        this.portChecking = options.portChecking;
+        this.disconnectInvalidProtocols = options.disconnectInvalidProtocol;
+        this.serverID = options.serverID;
+        this.warnOnCantKeepUp = options.warnOnCantKeepUp;
+
+        this.logger = LoggerFactory.getLogger("JRakLibPlus Server");
+
+        this.hookManager = new HookManager(this);
+
+        addTask(0, this::handlePackets);
+        addTask(0, this::checkBlacklist);
+        addShutdownTask(() -> this.socket.close());
+    }
 
     /**
-     * Creates a new RakNet server and binds to the specified address.
-     * @param logger The Logger this server will use.
-     * @param bindAddress The address the server will bind to.
-     * @param options The options for this server.
-     * @param impl The ServerInterface to communicate with the implementation.
+     * Starts the server in the current thread. This method will block
+     * as long as the server is running.
      */
-    public RakNetServer(Logger logger, SocketAddress bindAddress, ServerOptions options, ServerInterface impl) {
-        serverID = new Random().nextLong();
-        server = impl;
-        try {
-            channel = DatagramChannel.open();
-            channel.socket().bind(bindAddress);
-            channel.configureBlocking(false);
-            workers = Executors.newFixedThreadPool(options.workerThreads, new NioThreadFactory());
-            logger.debug("RakNetServer started on "+bindAddress+" with "+options.workerThreads+" workers.");
-            this.logger = logger;
-            this.options = options;
-        } catch (SocketException e) {
-            logger.error("*** FAILED TO BIND TO "+bindAddress+"! Perhaps another server is running on that port?");
-            JRakLibPlus.printExceptionToLogger(logger, e);
-        } catch (IOException e) {
-            logger.error("*** FAILED TO OPEN CHANNEL! "+e.getClass().getName()+": "+e.getMessage());
-            JRakLibPlus.printExceptionToLogger(logger, e);
-        }
+    public void start() {
+        this.running = true;
+        this.stopped = false;
+        run();
     }
 
-    public void startup() {
-        if(!running) {
-            running = true;
-            start();
-        }
+    /**
+     * Stops the server. This method will not block, to check if
+     * the server has finished it's last tick use <code>isStopped()</code>
+     */
+    public void stop() {
+        this.running = false;
     }
 
-    @Override
-    public void run() {
-        setName("ServerCommandThread");
-        while (running) {
-            long start = System.currentTimeMillis();
+    protected void run() {
+        this.logger.info("Server starting...");
+        if (bind()) {
+            this.logger.info("RakNetServer bound to " + bindAddress + ", running on RakNet protocol " + JRakLibPlus.RAKNET_PROTOCOL);
             try {
-                tick();
-            } catch (IOException e) {
-                logger.warn("Exception in tick: "+e.getClass().getName()+": "+e.getMessage());
-                JRakLibPlus.printExceptionToLogger(logger, e);
+                while (running) {
+                    long start = System.currentTimeMillis();
+                    tick();
+                    long elapsed = System.currentTimeMillis() - start;
+                    if (elapsed >= 50) {
+                        if (this.warnOnCantKeepUp)
+                            this.logger.warn("Can't keep up, did the system time change or is the server overloaded? (" + elapsed + ">50)");
+                    } else {
+                        //Thread.sleep(50 - elapsed);
+                    }
+                }
+            } catch (Exception e) {
+                this.logger.error("Fatal Exception, server has crashed! " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
+                stop();
             }
-            long elapsed = System.currentTimeMillis() - start;
-            if(elapsed < 50) {
+        }
+
+        this.shutdownTasks.stream().forEach(Runnable::run);
+
+        this.stopped = true;
+        this.logger.info("Server has stopped.");
+    }
+
+    private void tick() {
+        if (this.tasks.isEmpty()) return;
+        synchronized (this.tasks) {
+            List<TaskInfo> remove = new ArrayList<>();
+            Map<TaskInfo, Runnable> tasks = new HashMap<>(this.tasks);
+            tasks.keySet().stream().filter(ti -> (System.currentTimeMillis() - ti.registeredAt) >= ti.runIn).forEach(ti -> {
+                this.tasks.get(ti).run();
+                remove.add(ti);
+            });
+            remove.stream().forEach(this.tasks::remove);
+        }
+    }
+
+    private boolean bind() {
+        try {
+            this.socket = new DatagramSocket(this.bindAddress);
+
+            this.socket.setBroadcast(true);
+            this.socket.setSendBufferSize(this.sendBufferSize);
+            this.socket.setReceiveBufferSize(this.receiveBufferSize);
+        } catch (SocketException e) {
+            this.logger.error("Failed to bind " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            stop();
+            return false;
+        }
+        return true;
+    }
+
+    private void handlePackets() {
+        try {
+            this.socket.setSoTimeout(1);
+            while (true) {
+                DatagramPacket packet = new DatagramPacket(new byte[2048], 2048);
                 try {
-                    sleep(50 - elapsed);
-                } catch (InterruptedException e) {
-                    logger.error("Interrupted while sleeping in tick: "+e.getMessage());
-                    JRakLibPlus.printExceptionToLogger(logger, e);
+                    this.socket.receive(packet);
+                    packet.setData(Arrays.copyOf(packet.getData(), packet.getLength()));
+                    handlePacket(packet);
+                } catch (SocketTimeoutException e) {
+                    break;
                 }
             }
-            lastTick = System.currentTimeMillis();
+        } catch (java.io.IOException e) {
+            this.logger.warn("java.io.IOException while receiving packets: " + e.getMessage());
         }
-    }
 
-    private void tick() throws IOException {
-        readPackets();
-        int max = 1000;
-        while(max-- > 0) {
-            if(packetQueue.isEmpty()) break;
-            UnknownPacket pkt = packetQueue.remove();
-            pkt.session.handlePacket(pkt.packet);
-        }
-        sessions.values().forEach(session -> session.update(System.currentTimeMillis()));
-    }
-
-    private void readPackets() throws IOException {
-        int max = options.maxPacketsPerTick;
-        while(max > 0) {
-            ByteBuffer bb = ByteBuffer.allocate(options.recvBufferSize);
-            SocketAddress address = channel.receive(bb);
-            if(address != null) {
-                workers.execute(new PacketWorker(this, address, Arrays.copyOf(bb.array(), bb.position())));
-                max--;
-            } else {
-                break;
+        while (!this.sendQueue.isEmpty()) {
+            DatagramPacket pkt = this.sendQueue.remove();
+            try {
+                this.socket.send(pkt);
+            } catch (IOException e) {
+                this.logger.warn("java.io.IOException while sending packet: " + e.getMessage());
             }
         }
+        addTask(0, this::handlePackets); //Run next tick
     }
 
-    public void shutdown() throws InterruptedException {
-        if(running) {
-            running = false;
-            join();
+    private void checkBlacklist() {
+        synchronized (this.blacklist) {
+            if (!blacklist.isEmpty()) {
+                List<String> toRemove = new ArrayList<>();
+                blacklist.keySet().stream().forEach(s -> {
+                    long millis = this.blacklist.get(s)[0];
+                    long time = this.blacklist.get(s)[1];
+                    if (time > 0) {
+                        if ((System.currentTimeMillis() - millis) >= time) {
+                            toRemove.add(s);
+                        }
+                    }
+                });
+                toRemove.stream().forEach(this.blacklist::remove);
+            }
+        }
+        addTask(0, this::checkBlacklist);
+    }
+
+    private void handlePacket(DatagramPacket packet) {
+        synchronized (this.blacklist) {
+            if (this.blacklist.containsKey(packet.getSocketAddress().toString())) return;
+        }
+
+        switch (packet.getData()[0]) { //Check for pings
+            case JRakLibPlus.ID_UNCONNECTED_PING_OPEN_CONNECTIONS:
+                UnconnectedPingOpenConnectionsPacket upocp = new UnconnectedPingOpenConnectionsPacket();
+                upocp.decode(packet.getData());
+
+                AdvertiseSystemPacket pong = new AdvertiseSystemPacket();
+                pong.serverID = this.serverID;
+                pong.pingID = upocp.pingID;
+                pong.identifier = this.broadcastName;
+                addPacketToQueue(pong, packet.getSocketAddress());
+                break;
+            case JRakLibPlus.ID_CONNECTED_PING_OPEN_CONNECTIONS:
+                ConnectedPingOpenConnectionsPacket ping = new ConnectedPingOpenConnectionsPacket();
+                ping.decode(packet.getData());
+
+                UnconnectedPongOpenConnectionsPacket pong2 = new UnconnectedPongOpenConnectionsPacket();
+                pong2.serverID = this.serverID;
+                pong2.pingID = ping.pingID;
+                pong2.identifier = this.broadcastName;
+                addPacketToQueue(pong2, packet.getSocketAddress());
+                break;
+            default:
+                synchronized (this.sessions) {
+                    Session session;
+                    if (!this.sessions.containsKey(packet.getAddress().toString() + ":" + packet.getPort())) {
+                        session = new Session(SystemAddress.fromSocketAddress(packet.getSocketAddress()), this);
+                        this.sessions.put("/" + session.getAddress().toString(), session);
+                        this.logger.debug("Session opened from " + packet.getAddress().toString());
+
+                        this.hookManager.activateHook(HookManager.Hook.SESSION_OPENED, session);
+                    } else session = this.sessions.get(packet.getAddress().toString() + ":" + packet.getPort());
+
+                    session.handlePacket(packet.getData());
+                }
+                break;
         }
     }
 
-    protected void addToQueue(RakNetPacket packet, NioSession session) {
-        UnknownPacket pkt = new UnknownPacket();
-        pkt.packet = packet;
-        pkt.session = session;
-        packetQueue.add(pkt);
-    }
-
-    protected NioSession openSession(SocketAddress address) {
-        NioSession session = new NioSession(this, SystemAddress.fromSocketAddress(address));
-        sessions.put(session.getAddress().toString(), session);
-        return session;
-    }
-
-    protected void closeSession(final NioSession session, final String reason) {
-        sessions.remove(session.getAddress().toString());
-        workers.execute(() -> server.sessionClosed(session, reason));
-    }
-
-    protected void signalSessionConnected(final NioSession session) {
-        workers.execute(() -> server.sessionOpened(session));
-    }
-
-    protected void signalEncapsulatedPacket(final NioSession session, final EncapsulatedPacket packet) {
-        workers.execute(() -> server.handleEncapsulatedPacket(packet, session));
-    }
-
-    public Logger getLogger() {
-        return logger;
-    }
-
-    public NioSession getSession(SystemAddress address) {
-        if(sessions.containsKey(address.toString())) {
-            return sessions.get(address.toString());
+    public void addPacketToQueue(RakNetPacket packet, SocketAddress address) {
+        synchronized (this.sendQueue) {
+            byte[] buffer = packet.encode();
+            this.sendQueue.add(new DatagramPacket(buffer, buffer.length, address));
         }
-        return null;
+    }
+
+    protected void onSessionClose(String reason, Session session) {
+        this.logger.debug("Session " + session.getAddress().toString() + " disconnected: " + reason);
+        this.sessions.remove("/" + session.getAddress().toString());
+
+        this.hookManager.activateHook(HookManager.Hook.SESSION_CLOSED, session);
     }
 
     /**
-     * Gets the name of this server that will show up in the server list.
-     * @return The name of this server.
+     * Blacklist an address for as long as the server is running. All packets
+     * from this address will be ignored.
+     * @param address The address to be blacklisted. Must include a port.
      */
-    public String getBroadcastName() {
-        return options.name;
+    public void addToBlacklist(SocketAddress address) {
+        addToBlacklist(address, -1);
     }
 
-    public int getPort() {
-        return channel.socket().getLocalPort();
+    /**
+     * Blacklsit an address for a certain amount of time. All packets
+     * for a certain amount of time will be ignored.
+     * @param address The address to be blacklisted. Must include a port
+     * @param time The amount of time for the address to be blacklisted. In milliseconds
+     */
+    public void addToBlacklist(SocketAddress address, int time) {
+        synchronized (this.blacklist) {
+            this.logger.info("Added " + address.toString() + " to blacklist for " + time + "ms");
+            this.blacklist.put(address.toString(), new Long[]{System.currentTimeMillis(), Long.valueOf(time)});
+        }
     }
 
-    public ServerOptions getOptions() {
-        return options;
-    }
-
-    public void sendPacket(RakNetPacket packet, SystemAddress address) {
-        try {
-            channel.send(ByteBuffer.wrap(packet.encode()), new InetSocketAddress(address.getIpAddress(), address.getPort()));
-        } catch (IOException e) {
-            logger.error(e.getClass().getName()+" while sending packet "+packet+" to "+address.getIpAddress()+":"+address.getPort()+" "+e.getMessage());
-            JRakLibPlus.printExceptionToLogger(logger, e);
+    protected void internal_addToBlacklist(SocketAddress address, int time) { //Suppress log info
+        synchronized (this.blacklist) {
+            this.blacklist.put(address.toString(), new Long[]{System.currentTimeMillis(), Long.valueOf(time)});
         }
     }
 
     /**
-     * These options contain specific values that the server uses to function.
-     * Tweaking these may improve performance.
-     *
-     * @author jython234
+     * Adds a task to be ran in <code>runIn</code> milliseconds.
+     * @param runIn The amount of milliseconds from the current time
+     *              to run the task.
+     * @param r The task to be ran.
+     */
+    public void addTask(long runIn, Runnable r) {
+        synchronized (this.tasks) {
+            TaskInfo ti = new TaskInfo();
+            ti.runIn = runIn;
+            ti.registeredAt = System.currentTimeMillis();
+            this.tasks.put(ti, r);
+        }
+    }
+
+    /**
+     * Adds a task to be ran when the server shuts down.
+     * @param r The task to be ran.
+     */
+    public void addShutdownTask(Runnable r) {
+        synchronized (shutdownTasks) {
+            shutdownTasks.add(r);
+        }
+    }
+
+    /**
+     * Options the server uses to setup
      */
     public static class ServerOptions {
-        public int workerThreads = 4;
+        public String broadcastName = "A JRakLibPlus Server.";
         /**
-         * The maximum amount of packets to read per tick (20 ticks per second)
+         * The maximum amount of packets to read and process per tick (20 ticks per second)
          */
-        public int maxPacketsPerTick = 5000;
+        public int maxPacketsPerTick = 500;
         public int recvBufferSize = 4096;
         public int sendBufferSize = 4096;
-        public String name = "MCPE;A JRakLibPlus server;45;0.14.0;-1;0";
+        public int packetTimeout = 5000;
         public boolean portChecking = true;
         /**
          * If this is true then the server will disconnect clients with invalid raknet protocols.
          * The server currently supports protocol 7
          */
         public boolean disconnectInvalidProtocol = true;
+        /**
+         * If to log warning messages when a tick takes longer than 50 milliseconds.
+         */
+        public boolean warnOnCantKeepUp = true;
+        /**
+         * The server's unique 64 bit identifier. This is usually generated
+         * randomly at start.
+         */
+        public long serverID = new Random().nextLong();
     }
 
-    protected static class UnknownPacket {
-        public RakNetPacket packet;
-        public NioSession session;
-    }
-
-    public static RakNetPacket getAndDecodePacket(byte[] buffer) {
-        if(packets.containsKey(buffer[0])) {
-            try {
-                RakNetPacket packet = packets.get(buffer[0]).newInstance();
-                packet.decode(buffer);
-                return packet;
-            } catch (InstantiationException | IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return null;
-    }
-
-    public static RakNetPacket getAndDecodePacket(byte[] buffer, NioSession session) {
-        if(packets.containsKey(buffer[0])) {
-            try {
-                RakNetPacket packet = packets.get(buffer[0]).newInstance();
-                packet.decode(buffer);
-                return packet;
-            } catch (InstantiationException | IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return null;
-    }
-
-    private static void registerPackets() {
-        //RakNet
-        packets.put(ID_CONNECTED_PING_OPEN_CONNECTIONS, ConnectedPingOpenConnectionsPacket.class);
-        packets.put(ID_UNCONNECTED_PING_OPEN_CONNECTIONS, UnconnectedPingOpenConnectionsPacket.class);
-        packets.put(ID_OPEN_CONNECTION_REQUEST_1, OpenConnectionRequest1Packet.class);
-        packets.put(ID_OPEN_CONNECTION_REQUEST_2, OpenConnectionRequest2Packet.class);
-        packets.put(ID_OPEN_CONNECTION_REPLY_1, OpenConnectionReply1Packet.class);
-        packets.put(ID_OPEN_CONNECTION_REPLY_2, OpenConnectionReply2Packet.class);
-        packets.put(ID_UNCONNECTED_PONG_OPEN_CONNECTIONS, UnconnectedPongOpenConnectionsPacket.class);
-        packets.put(ID_ADVERTISE_SYSTEM, AdvertiseSystemPacket.class);
-        packets.put(ID_INCOMPATIBLE_PROTOCOL_VERSION, IncompatibleProtocolVersionPacket.class);
-        packets.put(CUSTOM_PACKET_0, CustomPackets.CustomPacket_0.class);
-        packets.put(CUSTOM_PACKET_1, CustomPackets.CustomPacket_1.class);
-        packets.put(CUSTOM_PACKET_2, CustomPackets.CustomPacket_2.class);
-        packets.put(CUSTOM_PACKET_3, CustomPackets.CustomPacket_3.class);
-        packets.put(CUSTOM_PACKET_4, CustomPackets.CustomPacket_4.class);
-        packets.put(CUSTOM_PACKET_5, CustomPackets.CustomPacket_5.class);
-        packets.put(CUSTOM_PACKET_6, CustomPackets.CustomPacket_6.class);
-        packets.put(CUSTOM_PACKET_7, CustomPackets.CustomPacket_7.class);
-        packets.put(CUSTOM_PACKET_8, CustomPackets.CustomPacket_8.class);
-        packets.put(CUSTOM_PACKET_9, CustomPackets.CustomPacket_9.class);
-        packets.put(CUSTOM_PACKET_A, CustomPackets.CustomPacket_A.class);
-        packets.put(CUSTOM_PACKET_B, CustomPackets.CustomPacket_B.class);
-        packets.put(CUSTOM_PACKET_C, CustomPackets.CustomPacket_C.class);
-        packets.put(CUSTOM_PACKET_D, CustomPackets.CustomPacket_D.class);
-        packets.put(CUSTOM_PACKET_E, CustomPackets.CustomPacket_E.class);
-        packets.put(CUSTOM_PACKET_F, CustomPackets.CustomPacket_F.class);
-        packets.put(ACK, ACKPacket.class);
-        packets.put(NACK, NACKPacket.class);
-        //Minecraft
-        packets.put(MC_CLIENT_CONNECT, ClientConnectPacket.class);
-        packets.put(MC_SERVER_HANDSHAKE, ServerHandshakePacket.class);
-        packets.put(MC_CLIENT_HANDSHAKE, ClientHandshakePacket.class);
-        packets.put(MC_PING, PingPacket.class);
-        packets.put(MC_PONG, PongPacket.class);
-    }
-
-    static {
-        registerPackets();
+    private class TaskInfo {
+        public long registeredAt;
+        public long runIn;
     }
 }

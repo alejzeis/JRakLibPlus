@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,14 +19,15 @@
  */
 package io.github.jython234.jraklibplus.protocol.minecraft;
 
-import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.nio.Buffer;
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
+import io.github.jython234.jraklibplus.protocol.RakNetPacket;
+
+import static io.github.jython234.jraklibplus.JRakLibPlus.MC_CLIENT_CONNECT;
 
 /**
  * MC_CLIENT_CONNECT Packet implementation
  *
- * @author RedstoneLamp Team
+ * @author jython234
  */
 public class ClientConnectPacket extends RakNetPacket {
 
