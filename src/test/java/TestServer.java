@@ -18,7 +18,10 @@
  * along with JRakLibPlus.  If not, see <http://www.gnu.org/licenses/>.
  */
 import io.github.jython234.jraklibplus.protocol.raknet.CustomPackets;
+import io.github.jython234.jraklibplus.protocol.raknet.EncapsulatedPacket;
+import io.github.jython234.jraklibplus.server.HookManager;
 import io.github.jython234.jraklibplus.server.RakNetServer;
+import io.github.jython234.jraklibplus.server.Session;
 import io.github.jython234.jraklibplus.server.ThreadedRakNetServer;
 import org.slf4j.impl.SimpleLogger;
 
@@ -41,6 +44,11 @@ public class TestServer {
         options.broadcastName = "MCPE;A JRakLibPlus server;45;0.14.0;-1;0";
         RakNetServer server = new RakNetServer(new InetSocketAddress("0.0.0.0", 19132), options);
         //RakNetServer server = new ThreadedRakNetServer(new InetSocketAddress("0.0.0.0", 19132), options);
+
+        server.getHookManager().addHook(HookManager.Hook.SESSION_OPENED, (session, params) -> System.out.println("Session opened: "+session.getAddress()));
+        server.getHookManager().addHook(HookManager.Hook.SESSION_CLOSED, ((session, params) -> System.out.println("Session closed: "+session.getAddress())));
+        server.getHookManager().addHook(HookManager.Hook.PACKET_RECIEVED, (session, params) -> System.out.println("IN: "+String.format("%02X", ((EncapsulatedPacket) params[0]).getPID())));
+
         server.start();
 
         CustomPackets.CustomPacket_0 c = new CustomPackets.CustomPacket_0();

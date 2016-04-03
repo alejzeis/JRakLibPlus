@@ -55,6 +55,8 @@ public class Session {
     @Getter private long clientID;
     @Getter private long timeLastPacketReceived;
 
+    @Getter private int lastPing = -99;
+
     private int lastSeqNum = -1;
     private int sendSeqNum = 0;
 
@@ -99,19 +101,6 @@ public class Session {
             }
 
             this.sendQueuedPackets();
-
-            //TODO:
-            /*
-            synchronized (this.epSendQueue) {
-                if(!this.epSendQueue.isEmpty()) {
-                    int pkLimit = 8;
-                    CustomPacket cp = new CustomPackets.CustomPacket_4();
-                    for(EncapsulatedPacket pk : this.epSendQueue) {
-                        cp.packets.add(pk);
-                    }
-                }
-            }
-            */
 
             this.server.addTask(0, this::update);
         }
@@ -385,16 +374,8 @@ public class Session {
                 }
                 this.state = CONNECTED;
 
-                /*
-                PingPacket ping2 = new PingPacket();
-                ping2.pingID = System.currentTimeMillis();
-
-                EncapsulatedPacket ep3 = new EncapsulatedPacket();
-                ep3.reliability = Reliability.UNRELIABLE;
-                ep3.payload = ping2.encode();
-                this.addToQueue(ep3, true);
-                this.server.getLogger().debug("Ping: "+ping2.pingID);
-                */
+                pingClient();
+                this.server.addTask(3000, () -> this.server.getLogger().debug("Client latency is "+getLastPing()+"ms"));
                 break;
 
             case JRakLibPlus.MC_PING:
@@ -414,9 +395,27 @@ public class Session {
                 PongPacket pong2 = new PongPacket();
                 pong2.decode(pk.payload);
 
-                //this.server.getLogger().debug("Pong: "+pong2.pingID);
+                this.lastPing = (int) (System.currentTimeMillis() - pong2.pingID);
+                break;
+
+            default:
+                this.server.getHookManager().activateHook(HookManager.Hook.PACKET_RECIEVED, this, pk);
                 break;
         }
+    }
+
+    /**
+     * Pings the client. The latency in milliseconds is stored in the
+     * <code>lastPing</code> variable and can be retrieved using <code>getLastPing()</code>
+     */
+    public void pingClient() {
+        PingPacket ping2 = new PingPacket();
+        ping2.pingID = System.currentTimeMillis();
+
+        EncapsulatedPacket ep3 = new EncapsulatedPacket();
+        ep3.reliability = Reliability.UNRELIABLE;
+        ep3.payload = ping2.encode();
+        this.addToQueue(ep3, true);
     }
 
     public void disconnect(String reason) {
@@ -424,6 +423,8 @@ public class Session {
         ep.reliability = Reliability.UNRELIABLE;
         ep.payload = new DisconnectNotificationPacket().encode();
         this.addToQueue(ep, true);
+
+        this.server.internal_addToBlacklist(this.address.toSocketAddress(), 500); // Prevent another session from opening, as the client will reply back with a few more packets
 
         this.state = DISCONNECTED;
 

@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.RunnableFuture;
 
 /**
  * An implementation of a RakNet game server. This implementation
@@ -63,6 +64,8 @@ public class RakNetServer {
     @Getter private boolean warnOnCantKeepUp;
 
     @Getter private InetSocketAddress bindAddress;
+    @Getter private HookManager hookManager;
+
     private DatagramSocket socket;
     private final Queue<DatagramPacket> sendQueue = new ArrayDeque<>();
 
@@ -70,6 +73,8 @@ public class RakNetServer {
 
     private final List<Runnable> shutdownTasks = new ArrayList<>();
     private final Map<TaskInfo, Runnable> tasks = new HashMap<>();
+
+    private final Map<String, Long[]> blacklist = new HashMap<>();
 
     public RakNetServer(InetSocketAddress bindAddress, ServerOptions options) {
         this.bindAddress = bindAddress;
@@ -86,7 +91,10 @@ public class RakNetServer {
 
         this.logger = LoggerFactory.getLogger("JRakLibPlus Server");
 
+        this.hookManager = new HookManager(this);
+
         addTask(0, this::handlePackets);
+        addTask(0, this::checkBlacklist);
         addShutdownTask(() -> this.socket.close());
     }
 
@@ -121,7 +129,7 @@ public class RakNetServer {
                         if (this.warnOnCantKeepUp)
                             this.logger.warn("Can't keep up, did the system time change or is the server overloaded? (" + elapsed + ">50)");
                     } else {
-                        Thread.sleep(50 - elapsed);
+                        //Thread.sleep(50 - elapsed);
                     }
                 }
             } catch (Exception e) {
@@ -193,7 +201,28 @@ public class RakNetServer {
         addTask(0, this::handlePackets); //Run next tick
     }
 
+    private void checkBlacklist() {
+        synchronized (this.blacklist) {
+            if (!blacklist.isEmpty()) {
+                List<String> toRemove = new ArrayList<>();
+                blacklist.keySet().stream().forEach(s -> {
+                    long millis = this.blacklist.get(s)[0];
+                    long time = this.blacklist.get(s)[1];
+                    if (time > 0) {
+                        if ((System.currentTimeMillis() - millis) >= time) {
+                            toRemove.add(s);
+                        }
+                    }
+                });
+                toRemove.stream().forEach(this.blacklist::remove);
+            }
+        }
+        addTask(0, this::checkBlacklist);
+    }
+
     private void handlePacket(DatagramPacket packet) {
+        synchronized (this.blacklist) { if(this.blacklist.containsKey(packet.getSocketAddress().toString())) return; }
+
         switch (packet.getData()[0]) { //Check for pings
             case JRakLibPlus.ID_UNCONNECTED_PING_OPEN_CONNECTIONS:
                 UnconnectedPingOpenConnectionsPacket upocp = new UnconnectedPingOpenConnectionsPacket();
@@ -222,6 +251,8 @@ public class RakNetServer {
                         session = new Session(SystemAddress.fromSocketAddress(packet.getSocketAddress()), this);
                         this.sessions.put("/" + session.getAddress().toString(), session);
                         this.logger.debug("Session opened from "+packet.getAddress().toString());
+
+                        this.hookManager.activateHook(HookManager.Hook.SESSION_OPENED, session);
                     } else session = this.sessions.get(packet.getAddress().toString() + ":" + packet.getPort());
 
                     session.handlePacket(packet.getData());
@@ -238,9 +269,38 @@ public class RakNetServer {
     }
 
     protected void onSessionClose(String reason, Session session) {
-        //TODO: event
         this.logger.debug("Session "+session.getAddress().toString()+" disconnected: "+reason);
         this.sessions.remove("/" + session.getAddress().toString());
+
+        this.hookManager.activateHook(HookManager.Hook.SESSION_CLOSED, session);
+    }
+
+    /**
+     * Blacklist an address for as long as the server is running. All packets
+     * from this address will be ignored.
+     * @param address The address to be blacklisted. Must include a port.
+     */
+    public void addToBlacklist(SocketAddress address) {
+        addToBlacklist(address, -1);
+    }
+
+    /**
+     * Blacklsit an address for a certain amount of time. All packets
+     * for a certain amount of time will be ignored.
+     * @param address The address to be blacklisted. Must include a port
+     * @param time The amount of time for the address to be blacklisted. In milliseconds
+     */
+    public void addToBlacklist(SocketAddress address, int time) {
+        synchronized (this.blacklist) {
+            this.logger.info("Added "+address.toString()+" to blacklist for "+time+"ms");
+            this.blacklist.put(address.toString(), new Long[] {System.currentTimeMillis(), Long.valueOf(time)});
+        }
+    }
+
+    protected void internal_addToBlacklist(SocketAddress address, int time) { //Suppress log info
+        synchronized (this.blacklist) {
+            this.blacklist.put(address.toString(), new Long[] {System.currentTimeMillis(), Long.valueOf(time)});
+        }
     }
 
     /**
