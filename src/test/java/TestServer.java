@@ -42,7 +42,7 @@ import io.github.jython234.jraklibplus.server.HookManager;
 import io.github.jython234.jraklibplus.server.RakNetServer;
 import io.github.jython234.jraklibplus.server.Session;
 import io.github.jython234.jraklibplus.server.ThreadedRakNetServer;
-import org.slf4j.impl.SimpleLogger;
+//import org.slf4j.impl.SimpleLogger;
 
 
 import javax.xml.bind.DatatypeConverter;
@@ -57,7 +57,7 @@ import java.util.regex.Pattern;
 public class TestServer {
 
     public static void main(String[] args) {
-        System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
+        //System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "DEBUG");
 
         RakNetServer.ServerOptions options = new RakNetServer.ServerOptions();
         options.broadcastName = "MCPE;A JRakLibPlus server;45;0.14.0;-1;0";

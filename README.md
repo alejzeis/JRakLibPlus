@@ -1,4 +1,4 @@
-# JRakLibPlus [![Travis](https://img.shields.io/travis/jython234/JRakLibPlus.svg?style=flat-square)](https://travis-ci.org/jython234/JRakLibPlus)
+# JRakLibPlus [![Travis](https://img.shields.io/travis/jython234/JRakLibPlus.svg?style=flat-square)](https://travis-ci.org/jython234/JRakLibPlus) [![GitHub license](https://img.shields.io/github/license/jython234/JRakLibPlus.svg?style=flat-square)]()
 A library for easy creation of RakNet servers, based on RakLib and JRakLib.
 
 ##### Currently supported features:
