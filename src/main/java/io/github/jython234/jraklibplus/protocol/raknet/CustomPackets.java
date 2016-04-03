@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 

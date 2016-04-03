@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,9 +19,11 @@
  */
 package io.github.jython234.jraklibplus.protocol.raknet;
 
-import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.nio.Buffer;
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
+import io.github.jython234.jraklibplus.protocol.RakNetPacket;
+
+import static io.github.jython234.jraklibplus.JRakLibPlus.ID_CONNECTED_PING_OPEN_CONNECTIONS;
+import static io.github.jython234.jraklibplus.JRakLibPlus.RAKNET_MAGIC;
 
 /**
  * ID_CONNECTED_PING_OPEN_CONNECTIONS Packet implementation

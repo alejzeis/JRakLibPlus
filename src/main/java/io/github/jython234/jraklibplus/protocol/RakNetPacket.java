@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -20,7 +20,6 @@
 package io.github.jython234.jraklibplus.protocol;
 
 import io.github.jython234.jraklibplus.nio.Buffer;
-import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
 import io.github.jython234.jraklibplus.nio.NioBuffer;
 
 import java.nio.ByteOrder;
@@ -61,6 +60,7 @@ public abstract class RakNetPacket {
     }
 
     protected abstract void _encode(Buffer buffer);
+
     protected abstract void _decode(Buffer buffer);
 
     /**

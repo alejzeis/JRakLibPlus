@@ -20,7 +20,7 @@
 -->
 <additionalHeaders>
     <javadoc_style>
-        <firstLine>/**EOL * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.EOL * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.EOL</firstLine>
+        <firstLine>/*EOL * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.EOL * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.EOL</firstLine>
         <beforeEachLine> * </beforeEachLine>
         <endLine> */</endLine>
         <!--<afterEachLine></afterEachLine>-->

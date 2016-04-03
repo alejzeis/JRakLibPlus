@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -23,7 +23,7 @@ import io.github.jython234.jraklibplus.nio.Buffer;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.util.SystemAddress;
 
-import static io.github.jython234.jraklibplus.JRakLibPlus.*;
+import static io.github.jython234.jraklibplus.JRakLibPlus.MC_CLIENT_HANDSHAKE;
 
 /**
  * MC_CLIENT_HANDSHAKE Packet implementation.
@@ -40,7 +40,7 @@ public class ClientHandshakePacket extends RakNetPacket {
     @Override
     protected void _encode(Buffer buffer) {
         buffer.putAddress(address);
-        for(SystemAddress a : systemAddresses) {
+        for (SystemAddress a : systemAddresses) {
             buffer.putAddress(a);
         }
         buffer.putLong(sendPing);
@@ -51,7 +51,7 @@ public class ClientHandshakePacket extends RakNetPacket {
     protected void _decode(Buffer buffer) {
         address = buffer.getAddress();
         systemAddresses = new SystemAddress[10];
-        for(int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             systemAddresses[i] = buffer.getAddress();
         }
         sendPing = buffer.getLong();

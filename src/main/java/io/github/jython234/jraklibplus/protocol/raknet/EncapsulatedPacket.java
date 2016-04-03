@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -19,8 +19,8 @@
  */
 package io.github.jython234.jraklibplus.protocol.raknet;
 
-import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 
 /**
  * Implementation of an EncapsulatedPacket contained in a CustomPacket.
@@ -52,16 +52,16 @@ public class EncapsulatedPacket extends RakNetPacket {
         buffer.putByte((byte) ((reliability.asByte() << 5) | (split ? 0b00010000 : 0)));
         buffer.putUnsignedShort(payload.length * 8); //Bytes to Bits
 
-        if(reliability ==  Reliability.RELIABLE || reliability ==  Reliability.RELIABLE_SEQUENCED || reliability ==  Reliability.RELIABLE_ORDERED) {
+        if (reliability == Reliability.RELIABLE || reliability == Reliability.RELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_ORDERED) {
             buffer.putLTriad(messageIndex);
         }
 
-        if(reliability == Reliability.UNRELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_ORDERED) {
+        if (reliability == Reliability.UNRELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_ORDERED) {
             buffer.putLTriad(orderIndex);
             buffer.putByte(orderChannel);
         }
 
-        if(split) {
+        if (split) {
             buffer.putInt(splitCount);
             buffer.putUnsignedShort(splitID);
             buffer.putInt(splitIndex);
@@ -78,16 +78,16 @@ public class EncapsulatedPacket extends RakNetPacket {
         split = (flags & 0b00010000) > 0;
         int length = (int) Math.ceil(buffer.getUnsignedShort() / 8.0); //Bits to Bytes
 
-        if(reliability ==  Reliability.RELIABLE || reliability ==  Reliability.RELIABLE_SEQUENCED || reliability ==  Reliability.RELIABLE_ORDERED) {
+        if (reliability == Reliability.RELIABLE || reliability == Reliability.RELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_ORDERED) {
             messageIndex = buffer.getLTriad();
         }
 
-        if(reliability == Reliability.UNRELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_ORDERED) {
+        if (reliability == Reliability.UNRELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_SEQUENCED || reliability == Reliability.RELIABLE_ORDERED) {
             orderIndex = buffer.getLTriad();
             orderChannel = buffer.getByte();
         }
 
-        if(split) {
+        if (split) {
             splitCount = buffer.getInt();
             splitID = buffer.getUnsignedShort();
             splitIndex = buffer.getInt();

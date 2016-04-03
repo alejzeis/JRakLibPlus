@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -40,7 +40,7 @@ public class SystemAddress {
     }
 
     public static SystemAddress fromSocketAddress(SocketAddress address) {
-        if(address instanceof InetSocketAddress) {
+        if (address instanceof InetSocketAddress) {
             return new SystemAddress(((InetSocketAddress) address).getHostString(), ((InetSocketAddress) address).getPort(), 4);
         }
         return null;
@@ -64,12 +64,12 @@ public class SystemAddress {
 
     @Override
     public String toString() {
-        return ipAddress+":"+port;
+        return ipAddress + ":" + port;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if(obj instanceof SystemAddress) {
+        if (obj instanceof SystemAddress) {
             return ((SystemAddress) obj).getIpAddress().equals(ipAddress) && ((SystemAddress) obj).getPort() == port;
         }
         return obj.equals(this);

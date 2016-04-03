@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -27,7 +27,6 @@ import io.github.jython234.jraklibplus.protocol.raknet.UnconnectedPingOpenConnec
 import io.github.jython234.jraklibplus.protocol.raknet.UnconnectedPongOpenConnectionsPacket;
 import io.github.jython234.jraklibplus.util.SystemAddress;
 import lombok.AccessLevel;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.slf4j.Logger;
@@ -36,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.RunnableFuture;
 
 /**
  * An implementation of a RakNet game server. This implementation
@@ -53,7 +51,9 @@ public class RakNetServer {
     @Getter private boolean stopped = true;
     @Getter(AccessLevel.PROTECTED) private Logger logger;
 
-    @Getter @Setter private String broadcastName;
+    @Getter
+    @Setter
+    private String broadcastName;
     @Getter private int maxPacketsPerTick;
     @Getter private int receiveBufferSize;
     @Getter private int sendBufferSize;
@@ -118,8 +118,8 @@ public class RakNetServer {
 
     protected void run() {
         this.logger.info("Server starting...");
-        if(bind()) {
-            this.logger.info("RakNetServer bound to "+bindAddress+", running on RakNet protocol "+ JRakLibPlus.RAKNET_PROTOCOL);
+        if (bind()) {
+            this.logger.info("RakNetServer bound to " + bindAddress + ", running on RakNet protocol " + JRakLibPlus.RAKNET_PROTOCOL);
             try {
                 while (running) {
                     long start = System.currentTimeMillis();
@@ -133,7 +133,7 @@ public class RakNetServer {
                     }
                 }
             } catch (Exception e) {
-                this.logger.error("Fatal Exception, server has crashed! "+e.getClass().getName()+": "+e.getMessage());
+                this.logger.error("Fatal Exception, server has crashed! " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace();
                 stop();
             }
@@ -146,7 +146,7 @@ public class RakNetServer {
     }
 
     private void tick() {
-        if(this.tasks.isEmpty()) return;
+        if (this.tasks.isEmpty()) return;
         synchronized (this.tasks) {
             List<TaskInfo> remove = new ArrayList<>();
             Map<TaskInfo, Runnable> tasks = new HashMap<>(this.tasks);
@@ -166,7 +166,7 @@ public class RakNetServer {
             this.socket.setSendBufferSize(this.sendBufferSize);
             this.socket.setReceiveBufferSize(this.receiveBufferSize);
         } catch (SocketException e) {
-            this.logger.error("Failed to bind "+e.getClass().getSimpleName()+": "+e.getMessage());
+            this.logger.error("Failed to bind " + e.getClass().getSimpleName() + ": " + e.getMessage());
             stop();
             return false;
         }
@@ -176,7 +176,7 @@ public class RakNetServer {
     private void handlePackets() {
         try {
             this.socket.setSoTimeout(1);
-            while(true) {
+            while (true) {
                 DatagramPacket packet = new DatagramPacket(new byte[2048], 2048);
                 try {
                     this.socket.receive(packet);
@@ -187,15 +187,15 @@ public class RakNetServer {
                 }
             }
         } catch (java.io.IOException e) {
-            this.logger.warn("java.io.IOException while receiving packets: "+e.getMessage());
+            this.logger.warn("java.io.IOException while receiving packets: " + e.getMessage());
         }
 
-        while(!this.sendQueue.isEmpty()) {
+        while (!this.sendQueue.isEmpty()) {
             DatagramPacket pkt = this.sendQueue.remove();
             try {
                 this.socket.send(pkt);
             } catch (IOException e) {
-                this.logger.warn("java.io.IOException while sending packet: "+e.getMessage());
+                this.logger.warn("java.io.IOException while sending packet: " + e.getMessage());
             }
         }
         addTask(0, this::handlePackets); //Run next tick
@@ -221,7 +221,9 @@ public class RakNetServer {
     }
 
     private void handlePacket(DatagramPacket packet) {
-        synchronized (this.blacklist) { if(this.blacklist.containsKey(packet.getSocketAddress().toString())) return; }
+        synchronized (this.blacklist) {
+            if (this.blacklist.containsKey(packet.getSocketAddress().toString())) return;
+        }
 
         switch (packet.getData()[0]) { //Check for pings
             case JRakLibPlus.ID_UNCONNECTED_PING_OPEN_CONNECTIONS:
@@ -247,10 +249,10 @@ public class RakNetServer {
             default:
                 synchronized (this.sessions) {
                     Session session;
-                    if(!this.sessions.containsKey(packet.getAddress().toString()+":"+packet.getPort())) {
+                    if (!this.sessions.containsKey(packet.getAddress().toString() + ":" + packet.getPort())) {
                         session = new Session(SystemAddress.fromSocketAddress(packet.getSocketAddress()), this);
                         this.sessions.put("/" + session.getAddress().toString(), session);
-                        this.logger.debug("Session opened from "+packet.getAddress().toString());
+                        this.logger.debug("Session opened from " + packet.getAddress().toString());
 
                         this.hookManager.activateHook(HookManager.Hook.SESSION_OPENED, session);
                     } else session = this.sessions.get(packet.getAddress().toString() + ":" + packet.getPort());
@@ -269,7 +271,7 @@ public class RakNetServer {
     }
 
     protected void onSessionClose(String reason, Session session) {
-        this.logger.debug("Session "+session.getAddress().toString()+" disconnected: "+reason);
+        this.logger.debug("Session " + session.getAddress().toString() + " disconnected: " + reason);
         this.sessions.remove("/" + session.getAddress().toString());
 
         this.hookManager.activateHook(HookManager.Hook.SESSION_CLOSED, session);
@@ -292,14 +294,14 @@ public class RakNetServer {
      */
     public void addToBlacklist(SocketAddress address, int time) {
         synchronized (this.blacklist) {
-            this.logger.info("Added "+address.toString()+" to blacklist for "+time+"ms");
-            this.blacklist.put(address.toString(), new Long[] {System.currentTimeMillis(), Long.valueOf(time)});
+            this.logger.info("Added " + address.toString() + " to blacklist for " + time + "ms");
+            this.blacklist.put(address.toString(), new Long[]{System.currentTimeMillis(), Long.valueOf(time)});
         }
     }
 
     protected void internal_addToBlacklist(SocketAddress address, int time) { //Suppress log info
         synchronized (this.blacklist) {
-            this.blacklist.put(address.toString(), new Long[] {System.currentTimeMillis(), Long.valueOf(time)});
+            this.blacklist.put(address.toString(), new Long[]{System.currentTimeMillis(), Long.valueOf(time)});
         }
     }
 

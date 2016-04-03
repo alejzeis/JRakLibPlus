@@ -1,4 +1,4 @@
-/**
+/*
  * JRakLibPlus is not affiliated with Jenkins Software LLC or RakNet.
  * This software is an enhanced port of RakLib https://github.com/PocketMine/RakLib.
 
@@ -22,7 +22,6 @@ package io.github.jython234.jraklibplus.server;
 import io.github.jython234.jraklibplus.JRakLibPlus;
 import io.github.jython234.jraklibplus.nio.Buffer;
 import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
-import io.github.jython234.jraklibplus.nio.NioBuffer;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.protocol.minecraft.*;
 import io.github.jython234.jraklibplus.protocol.raknet.*;
@@ -79,8 +78,8 @@ public class Session {
     }
 
     private void update() {
-        if(state == DISCONNECTED) return;
-        if((System.currentTimeMillis() - this.timeLastPacketReceived) >= this.server.getPacketTimeout()) {
+        if (state == DISCONNECTED) return;
+        if ((System.currentTimeMillis() - this.timeLastPacketReceived) >= this.server.getPacketTimeout()) {
             this.disconnect("timeout");
         } else {
             synchronized (this.ACKQueue) {
@@ -108,10 +107,12 @@ public class Session {
 
     private void sendQueuedPackets() {
         synchronized (this.sendQueue) {
-            if(!this.sendQueue.packets.isEmpty()) {
+            if (!this.sendQueue.packets.isEmpty()) {
                 this.sendQueue.sequenceNumber = this.sendSeqNum++;
                 this.sendPacket(this.sendQueue);
-                synchronized (this.recoveryQueue) { this.recoveryQueue.put(this.sendQueue.sequenceNumber, this.sendQueue); }
+                synchronized (this.recoveryQueue) {
+                    this.recoveryQueue.put(this.sendQueue.sequenceNumber, this.sendQueue);
+                }
 
                 this.sendQueue.packets.clear();
             }
@@ -134,10 +135,10 @@ public class Session {
                 break;
         }
 
-        if(pkt.getSize() + 4 > this.mtu) { // Too big to be sent in one packet, need to be split
+        if (pkt.getSize() + 4 > this.mtu) { // Too big to be sent in one packet, need to be split
             byte[][] buffers = JRakLibPlus.splitByteArray(pkt.payload, this.mtu - 34);
             int splitID = (this.splitID++) % 65536;
-            for(int count = 0; count < buffers.length; count++) {
+            for (int count = 0; count < buffers.length; count++) {
                 EncapsulatedPacket ep = new EncapsulatedPacket();
                 ep.splitID = splitID;
                 ep.split = true;
@@ -146,12 +147,12 @@ public class Session {
                 ep.splitIndex = count;
                 ep.payload = buffers[count];
 
-                if(count > 0) {
+                if (count > 0) {
                     ep.messageIndex = this.messageIndex++;
                 } else {
                     ep.messageIndex = pkt.messageIndex;
                 }
-                if(ep.reliability == Reliability.RELIABLE_ORDERED) {
+                if (ep.reliability == Reliability.RELIABLE_ORDERED) {
                     ep.orderChannel = pkt.orderChannel;
                     ep.orderIndex = pkt.orderIndex;
                 }
@@ -164,14 +165,16 @@ public class Session {
     }
 
     private void addToQueue(EncapsulatedPacket pkt, boolean immediate) {
-        if(immediate) {
+        if (immediate) {
             CustomPacket cp = new CustomPackets.CustomPacket_0();
             cp.packets.add(pkt);
             cp.sequenceNumber = this.sendSeqNum++;
             this.sendPacket(cp);
-            synchronized (this.recoveryQueue) { this.recoveryQueue.put(cp.sequenceNumber, cp); }
+            synchronized (this.recoveryQueue) {
+                this.recoveryQueue.put(cp.sequenceNumber, cp);
+            }
         } else {
-            if((this.sendQueue.getSize() + pkt.getSize()) > this.mtu) {
+            if ((this.sendQueue.getSize() + pkt.getSize()) > this.mtu) {
                 this.sendQueuedPackets();
             }
             synchronized (this.sendQueue) {
@@ -181,16 +184,16 @@ public class Session {
     }
 
     public void handlePacket(byte[] data) {
-        if(this.state == DISCONNECTED) return;
+        if (this.state == DISCONNECTED) return;
         this.timeLastPacketReceived = System.currentTimeMillis();
 
         switch (data[0]) {
             case JRakLibPlus.ID_OPEN_CONNECTION_REQUEST_1:
-                if(this.state == CONNECTING_1 || this.state == CONNECTING_2) {
+                if (this.state == CONNECTING_1 || this.state == CONNECTING_2) {
                     OpenConnectionRequest1Packet req1 = new OpenConnectionRequest1Packet();
                     req1.decode(data);
 
-                    if(req1.protocolVersion != JRakLibPlus.RAKNET_PROTOCOL) {
+                    if (req1.protocolVersion != JRakLibPlus.RAKNET_PROTOCOL) {
                         IncompatibleProtocolVersionPacket ipvp = new IncompatibleProtocolVersionPacket();
                         ipvp.protocolVersion = JRakLibPlus.RAKNET_PROTOCOL;
                         ipvp.serverID = this.server.getServerID();
@@ -207,17 +210,17 @@ public class Session {
                 }
                 break;
             case JRakLibPlus.ID_OPEN_CONNECTION_REQUEST_2:
-                if(this.state == CONNECTING_2) {
+                if (this.state == CONNECTING_2) {
                     OpenConnectionRequest2Packet req2 = new OpenConnectionRequest2Packet();
                     req2.decode(data);
 
                     this.clientID = req2.clientID;
-                    if(this.server.isPortChecking() && req2.serverAddress.getPort() != this.server.getBindAddress().getPort()) {
+                    if (this.server.isPortChecking() && req2.serverAddress.getPort() != this.server.getBindAddress().getPort()) {
                         this.disconnect("Incorrect Port");
                         return;
                     }
 
-                    if(req2.mtuSize != this.mtu) {
+                    if (req2.mtuSize != this.mtu) {
                         this.disconnect("Incorrect MTU");
                         return;
                     }
@@ -234,13 +237,13 @@ public class Session {
             // ACK/NACK
 
             case JRakLibPlus.ACK:
-                if(state != CONNECTED || this.state == HANDSHAKING) break;
+                if (state != CONNECTED || this.state == HANDSHAKING) break;
                 ACKPacket ack = new ACKPacket();
                 ack.decode(data);
 
                 synchronized (this.recoveryQueue) {
                     for (int seq : ack.packets) {
-                        if(this.recoveryQueue.containsKey(seq)) {
+                        if (this.recoveryQueue.containsKey(seq)) {
                             this.recoveryQueue.remove(seq);
                         }
                     }
@@ -248,13 +251,13 @@ public class Session {
 
                 break;
             case JRakLibPlus.NACK:
-                if(state != CONNECTED || this.state == HANDSHAKING) break;
+                if (state != CONNECTED || this.state == HANDSHAKING) break;
                 NACKPacket nack = new NACKPacket();
                 nack.decode(data);
 
                 synchronized (this.recoveryQueue) {
-                    for(int seq : nack.packets) {
-                        if(this.recoveryQueue.containsKey(seq)) {
+                    for (int seq : nack.packets) {
+                        if (this.recoveryQueue.containsKey(seq)) {
                             CustomPacket pk = this.recoveryQueue.get(seq);
                             pk.sequenceNumber = this.sendSeqNum++;
                             this.sendPacket(pk);
@@ -264,14 +267,14 @@ public class Session {
                 }
                 break;
             default:
-                if(this.state == CONNECTED || this.state == HANDSHAKING) {
+                if (this.state == CONNECTED || this.state == HANDSHAKING) {
                     //noinspection ConstantConditions
-                    if(data[0] >= JRakLibPlus.CUSTOM_PACKET_0 && data[0] <= JRakLibPlus.CUSTOM_PACKET_F) {
+                    if (data[0] >= JRakLibPlus.CUSTOM_PACKET_0 && data[0] <= JRakLibPlus.CUSTOM_PACKET_F) {
                         this.handleDataPacket(data);
                         break;
                     }
                 }
-                this.server.getLogger().debug("Unknown packet received: "+String.format("%02X", data[0]));
+                this.server.getLogger().debug("Unknown packet received: " + String.format("%02X", data[0]));
                 break;
         }
     }
@@ -282,7 +285,7 @@ public class Session {
 
         int diff = pk.sequenceNumber - this.lastSeqNum;
         synchronized (this.NACKQueue) {
-            if(!this.NACKQueue.isEmpty()) {
+            if (!this.NACKQueue.isEmpty()) {
                 this.NACKQueue.remove(pk.sequenceNumber);
                 if (diff != 1) {
                     for (int i = this.lastSeqNum + 1; i < pk.sequenceNumber; i++) {
@@ -291,9 +294,11 @@ public class Session {
                 }
             }
         }
-        synchronized (this.ACKQueue) { this.ACKQueue.add(pk.sequenceNumber); }
+        synchronized (this.ACKQueue) {
+            this.ACKQueue.add(pk.sequenceNumber);
+        }
 
-        if(diff >= 1) {
+        if (diff >= 1) {
             this.lastSeqNum = pk.sequenceNumber;
         }
 
@@ -302,13 +307,14 @@ public class Session {
     }
 
     private void handleSplitPacket(EncapsulatedPacket pk) {
-        if(pk.splitCount >= this.MAX_SPLIT_SIZE || pk.splitIndex >= this.MAX_SPLIT_SIZE || pk.splitIndex < 0) {
+        if (pk.splitCount >= this.MAX_SPLIT_SIZE || pk.splitIndex >= this.MAX_SPLIT_SIZE || pk.splitIndex < 0) {
             return;
         }
 
         synchronized (this.splitQueue) {
             if (!this.splitQueue.containsKey(pk.splitID)) {
-                if (this.splitQueue.size() >= this.MAX_SPLIT_COUNT) return; //Too many split packets in the queue will increase memory usage
+                if (this.splitQueue.size() >= this.MAX_SPLIT_COUNT)
+                    return; //Too many split packets in the queue will increase memory usage
                 Map<Integer, EncapsulatedPacket> m = new HashMap<>();
                 m.put(pk.splitIndex, pk);
                 this.splitQueue.put(pk.splitID, m);
@@ -318,12 +324,12 @@ public class Session {
                 this.splitQueue.put(pk.splitID, m);
             }
 
-            if(this.splitQueue.get(pk.splitID).size() == pk.splitCount) {
+            if (this.splitQueue.get(pk.splitID).size() == pk.splitCount) {
                 EncapsulatedPacket ep = new EncapsulatedPacket();
                 Buffer b = JavaByteBuffer.allocate(1024 * 1024, ByteOrder.BIG_ENDIAN);
                 int size = 0;
                 Map<Integer, EncapsulatedPacket> packets = this.splitQueue.get(pk.splitID);
-                for(int i = 0; i < pk.splitCount; i++) {
+                for (int i = 0; i < pk.splitCount; i++) {
                     b.put(packets.get(i).payload);
                     size = size + packets.get(i).payload.length;
                 }
@@ -340,8 +346,8 @@ public class Session {
 
 
     private void handleEncapsulatedPacket(EncapsulatedPacket pk) {
-        if(!(this.state == CONNECTED || this.state == HANDSHAKING)) return;
-        if(pk.split && this.state == CONNECTED) {
+        if (!(this.state == CONNECTED || this.state == HANDSHAKING)) return;
+        if (pk.split && this.state == CONNECTED) {
             this.handleSplitPacket(pk);
         }
 
@@ -365,17 +371,17 @@ public class Session {
                 break;
 
             case JRakLibPlus.MC_CLIENT_HANDSHAKE:
-                if(this.server.isPortChecking()) {
+                if (this.server.isPortChecking()) {
                     ClientHandshakePacket chp = new ClientHandshakePacket();
                     chp.decode(pk.payload);
-                    if(chp.address.getPort() != this.server.getBindAddress().getPort()) {
+                    if (chp.address.getPort() != this.server.getBindAddress().getPort()) {
                         this.disconnect("Invalid Port");
                     }
                 }
                 this.state = CONNECTED;
 
                 pingClient();
-                this.server.addTask(3000, () -> this.server.getLogger().debug("Client latency is "+getLastPing()+"ms"));
+                this.server.addTask(3000, () -> this.server.getLogger().debug("Client latency is " + getLastPing() + "ms"));
                 break;
 
             case JRakLibPlus.MC_PING:
