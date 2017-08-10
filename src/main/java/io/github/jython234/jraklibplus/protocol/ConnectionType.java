@@ -33,17 +33,20 @@ import lombok.Getter;
  */
 public enum ConnectionType {
 	
-	VANILLA("Vanilla", 0x00), JRAKNET("JRakNet", 0x01), RAKLIB("RakLib", 0x02), JRAKLIB_PLUS("JRakLib+", 0x03);
+	VANILLA("Vanilla", null, 0x00), JRAKNET("JRakNet", "Java", 0x01), RAKLIB("RakLib", "PHP", 0x02),
+	JRAKLIB_PLUS("JRakLib+", "Java", 0x03);
 
 	// Connection type header magic
 	public static final byte[] MAGIC = new byte[] { (byte) 0x03, (byte) 0x08, (byte) 0x05, (byte) 0x0B, 0x43,
 			(byte) 0x54, (byte) 0x49 };
 
 	@Getter private final String name;
+	@Getter private final String language;
 	@Getter private final short id;
 
-	private ConnectionType(String name, int id) {
+	private ConnectionType(String name, String language, int id) {
 		this.name = name;
+		this.language = language;
 		this.id = (short) id;
 		if (id < 0 || id > 255) {
 			throw new IllegalArgumentException("Invalid ID, must be in between 0-255");
