@@ -20,6 +20,7 @@
 package io.github.jython234.jraklibplus.protocol.raknet;
 
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.protocol.ConnectionType;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.util.SystemAddress;
 
@@ -33,36 +34,39 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.RAKNET_MAGIC;
  */
 public class OpenConnectionRequest2Packet extends RakNetPacket {
 
-    public SystemAddress serverAddress;
-    /**
-     * uint16 (unsigned short)
-     */
-    public int mtuSize;
-    public long clientID;
+	public SystemAddress serverAddress;
+	/**
+	 * uint16 (unsigned short)
+	 */
+	public int mtuSize;
+	public long clientID;
+	public ConnectionType connectionType;
 
-    @Override
-    protected void _encode(Buffer buffer) {
-        buffer.put(RAKNET_MAGIC);
-        buffer.putAddress(serverAddress);
-        buffer.putUnsignedShort(mtuSize);
-        buffer.putLong(clientID);
-    }
+	@Override
+	protected void _encode(Buffer buffer) {
+		buffer.put(RAKNET_MAGIC);
+		buffer.putAddress(serverAddress);
+		buffer.putUnsignedShort(mtuSize);
+		buffer.putLong(clientID);
+		connectionType = buffer.putConnectionType();
+	}
 
-    @Override
-    protected void _decode(Buffer buffer) {
-        buffer.skip(16); //MAGIC
-        serverAddress = buffer.getAddress();
-        mtuSize = buffer.getUnsignedShort();
-        clientID = buffer.getUnsignedShort();
-    }
+	@Override
+	protected void _decode(Buffer buffer) {
+		buffer.skip(16); // MAGIC
+		serverAddress = buffer.getAddress();
+		mtuSize = buffer.getUnsignedShort();
+		clientID = buffer.getLong();
+		connectionType = buffer.getConnectionType();
+	}
 
-    @Override
-    public byte getPID() {
-        return ID_OPEN_CONNECTION_REQUEST_2;
-    }
+	@Override
+	public byte getPID() {
+		return ID_OPEN_CONNECTION_REQUEST_2;
+	}
 
-    @Override
-    public int getSize() {
-        return 34;
-    }
+	@Override
+	public int getSize() {
+		return 34;
+	}
 }

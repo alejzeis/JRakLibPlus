@@ -19,6 +19,7 @@
  */
 package io.github.jython234.jraklibplus.nio;
 
+import io.github.jython234.jraklibplus.protocol.ConnectionType;
 import io.github.jython234.jraklibplus.util.SystemAddress;
 
 /**
@@ -58,6 +59,8 @@ public interface Buffer {
     String getString();
 
     SystemAddress getAddress();
+    
+    ConnectionType getConnectionType();
 
     boolean getBoolean();
 
@@ -76,6 +79,8 @@ public interface Buffer {
     void putString(String s);
 
     void putAddress(SystemAddress address);
+    
+    ConnectionType putConnectionType();
 
     void putBoolean(boolean b);
 

@@ -20,6 +20,7 @@
 package io.github.jython234.jraklibplus.protocol.raknet;
 
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.protocol.ConnectionType;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 
 import static io.github.jython234.jraklibplus.JRakLibPlus.ID_CONNECTED_PING_OPEN_CONNECTIONS;
@@ -32,27 +33,30 @@ import static io.github.jython234.jraklibplus.JRakLibPlus.RAKNET_MAGIC;
  */
 public class ConnectedPingOpenConnectionsPacket extends RakNetPacket {
 
-    public long pingID;
+	public long pingID;
+	public ConnectionType connectionType;
 
-    @Override
-    protected void _encode(Buffer buffer) {
-        buffer.putLong(pingID);
-        buffer.put(RAKNET_MAGIC);
-    }
+	@Override
+	protected void _encode(Buffer buffer) {
+		buffer.putLong(pingID);
+		buffer.put(RAKNET_MAGIC);
+		connectionType = buffer.putConnectionType();
+	}
 
-    @Override
-    protected void _decode(Buffer buffer) {
-        pingID = buffer.getLong();
-        //MAGIC
-    }
+	@Override
+	protected void _decode(Buffer buffer) {
+		pingID = buffer.getLong();
+		buffer.skip(16); //MAGIC
+		connectionType = buffer.getConnectionType();
+	}
 
-    @Override
-    public byte getPID() {
-        return ID_CONNECTED_PING_OPEN_CONNECTIONS;
-    }
+	@Override
+	public byte getPID() {
+		return ID_CONNECTED_PING_OPEN_CONNECTIONS;
+	}
 
-    @Override
-    public int getSize() {
-        return 25;
-    }
+	@Override
+	public int getSize() {
+		return 25;
+	}
 }

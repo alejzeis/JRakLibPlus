@@ -22,6 +22,7 @@ package io.github.jython234.jraklibplus.server;
 import io.github.jython234.jraklibplus.JRakLibPlus;
 import io.github.jython234.jraklibplus.nio.Buffer;
 import io.github.jython234.jraklibplus.nio.JavaByteBuffer;
+import io.github.jython234.jraklibplus.protocol.ConnectionType;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.protocol.minecraft.*;
 import io.github.jython234.jraklibplus.protocol.raknet.*;
@@ -52,6 +53,7 @@ public class Session {
     @Getter private int state;
     @Getter private int mtu;
     @Getter private long clientID;
+    @Getter private ConnectionType connectionType;
     @Getter private long timeLastPacketReceived;
 
     @Getter private int lastPing = -99;
@@ -224,6 +226,8 @@ public class Session {
                         this.disconnect("Incorrect MTU");
                         return;
                     }
+                    
+                    this.connectionType = req2.connectionType;
 
                     OpenConnectionReply2Packet reply2 = new OpenConnectionReply2Packet();
                     reply2.serverID = this.server.getServerID();
