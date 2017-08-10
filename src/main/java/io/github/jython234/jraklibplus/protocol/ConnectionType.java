@@ -28,7 +28,8 @@ import lombok.Getter;
  * 
  * @author Trent "MarfGamer" Summerlin
  * @author jython234
- * @see https://github.com/JRakNet/JRakNet/issues/new
+ * @see <a href=
+ *      "https://github.com/JRakNet/JRakNet/issues/new">https://github.com/JRakNet/JRakNet/issues/new</a>
  */
 public enum ConnectionType {
 	
