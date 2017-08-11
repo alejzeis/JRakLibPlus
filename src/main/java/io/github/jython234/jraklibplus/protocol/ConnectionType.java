@@ -25,6 +25,9 @@ import lombok.Getter;
  * Used to signify which implementation of the RakNet protocol is being used by
  * a connection. If you would like your implementation to be listed here, create
  * an issue on the JRakNet repository with the tag "Connection type support".
+ * Keep in mind that this functionality has <i>no</i> guarantees to function
+ * completely, as it is completely dependent on the implementation to implement
+ * this feature.
  * 
  * @author Trent "MarfGamer" Summerlin
  * @author jython234
