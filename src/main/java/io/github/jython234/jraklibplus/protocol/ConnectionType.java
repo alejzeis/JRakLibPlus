@@ -37,7 +37,8 @@ import lombok.Getter;
 public enum ConnectionType {
 	
 	VANILLA("Vanilla", null, 0x00), JRAKNET("JRakNet", "Java", 0x01), RAKLIB("RakLib", "PHP", 0x02),
-	JRAKLIB_PLUS("JRakLib+", "Java", 0x03);
+	JRAKLIB_PLUS("JRakLib+", "Java", 0x03), CRAKNET_PLUS_PLUS("CRakNet++", "C++", 0x04),
+	PYRAKNET("PyRakNet", "Python", 0x05);
 
 	// Connection type header magic
 	public static final byte[] MAGIC = new byte[] { (byte) 0x03, (byte) 0x08, (byte) 0x05, (byte) 0x0B, 0x43,
