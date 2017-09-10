@@ -38,7 +38,9 @@ public enum ConnectionType {
 	
 	VANILLA("Vanilla", null, 0x00), JRAKNET("JRakNet", "Java", 0x01), RAKLIB("RakLib", "PHP", 0x02),
 	JRAKLIB_PLUS("JRakLib+", "Java", 0x03), CRAKNET_PLUS_PLUS("CRakNet++", "C++", 0x04),
-	PYRAKNET("PyRakNet", "Python", 0x05);
+	PYRAKNET("PyRakNet", "Python", 0x05), GORAKNET("GoRakNet", "Go", 0x06), LUARAKNET("LuaRakNet", "Lua", 0x07),
+	CRAKNET_SHARP("CRakNet#", "C#", 0x08), PHPRAKNET("PHPRakNet", "PHP", 0x09), CRAKNET("CRakNet", "C", 0x0A),
+	DRAKNET("DRakNet", "D", 0x0B), NODERAKNET("NodeRakNet", "Node.js", 0x0C);
 
 	// Connection type header magic
 	public static final byte[] MAGIC = new byte[] { (byte) 0x03, (byte) 0x08, (byte) 0x05, (byte) 0x0B, 0x43,
