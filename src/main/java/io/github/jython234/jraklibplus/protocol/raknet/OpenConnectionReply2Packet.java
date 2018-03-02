@@ -20,6 +20,7 @@
 package io.github.jython234.jraklibplus.protocol.raknet;
 
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.protocol.ConnectionType;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 import io.github.jython234.jraklibplus.util.SystemAddress;
 
@@ -39,6 +40,7 @@ public class OpenConnectionReply2Packet extends RakNetPacket {
      * uint16 (unsigned short)
      */
     public int mtuSize;
+    public ConnectionType connectionType;
 
     @Override
     protected void _encode(Buffer buffer) {
@@ -47,6 +49,7 @@ public class OpenConnectionReply2Packet extends RakNetPacket {
         buffer.putAddress(clientAddress);
         buffer.putUnsignedShort(mtuSize);
         buffer.putByte((byte) 0); //security
+        connectionType = buffer.putConnectionType();
     }
 
     @Override
@@ -55,7 +58,8 @@ public class OpenConnectionReply2Packet extends RakNetPacket {
         serverID = buffer.getLong();
         clientAddress = buffer.getAddress();
         mtuSize = buffer.getUnsignedShort();
-        //security
+        buffer.skip(1); // security
+        connectionType = buffer.getConnectionType();
     }
 
     @Override

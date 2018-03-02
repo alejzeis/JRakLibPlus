@@ -19,10 +19,12 @@
  */
 package io.github.jython234.jraklibplus.nio;
 
+import io.github.jython234.jraklibplus.protocol.ConnectionType;
 import io.github.jython234.jraklibplus.util.SystemAddress;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 /**
@@ -31,160 +33,181 @@ import java.util.regex.Pattern;
  * @author jython234
  */
 public class JavaByteBuffer implements Buffer {
-    private ByteBuffer buffer;
+	private ByteBuffer buffer;
 
-    protected JavaByteBuffer(ByteBuffer buffer) {
-        this.buffer = buffer;
-    }
+	protected JavaByteBuffer(ByteBuffer buffer) {
+		this.buffer = buffer;
+	}
 
-    public static JavaByteBuffer allocate(int size, ByteOrder order) {
-        ByteBuffer bb = ByteBuffer.allocate(size);
-        bb.order(order);
-        return new JavaByteBuffer(bb);
-    }
+	public static JavaByteBuffer allocate(int size, ByteOrder order) {
+		ByteBuffer bb = ByteBuffer.allocate(size);
+		bb.order(order);
+		return new JavaByteBuffer(bb);
+	}
 
-    public static JavaByteBuffer wrap(byte[] bytes, ByteOrder order) {
-        ByteBuffer bb = ByteBuffer.wrap(bytes);
-        bb.order(order);
-        return new JavaByteBuffer(bb);
-    }
+	public static JavaByteBuffer wrap(byte[] bytes, ByteOrder order) {
+		ByteBuffer bb = ByteBuffer.wrap(bytes);
+		bb.order(order);
+		return new JavaByteBuffer(bb);
+	}
 
-    @Override
-    public byte[] get(int len) {
-        byte[] data = new byte[len];
-        buffer.get(data);
-        return data;
-    }
+	@Override
+	public byte[] get(int len) {
+		byte[] data = new byte[len];
+		buffer.get(data);
+		return data;
+	}
 
-    @Override
-    public void put(byte[] bytes) {
-        buffer.put(bytes);
-    }
+	@Override
+	public void put(byte[] bytes) {
+		buffer.put(bytes);
+	}
 
-    @Override
-    public byte getByte() {
-        return buffer.get();
-    }
+	@Override
+	public byte getByte() {
+		return buffer.get();
+	}
 
-    @Override
-    public short getShort() {
-        return buffer.getShort();
-    }
+	@Override
+	public short getShort() {
+		return buffer.getShort();
+	}
 
-    @Override
-    public int getUnsignedShort() {
-        return buffer.getShort() & 0xFFFF;
-    }
+	@Override
+	public int getUnsignedShort() {
+		return buffer.getShort() & 0xFFFF;
+	}
 
-    @Override
-    public int getLTriad() {
-        return (getByte() & 0xFF) | ((getByte() & 0xFF) << 8) | ((getByte() & 0x0F) << 16);
-    }
+	@Override
+	public int getLTriad() {
+		return (getByte() & 0xFF) | ((getByte() & 0xFF) << 8) | ((getByte() & 0x0F) << 16);
+	}
 
-    @Override
-    public int getInt() {
-        return buffer.getInt();
-    }
+	@Override
+	public int getInt() {
+		return buffer.getInt();
+	}
 
-    @Override
-    public long getLong() {
-        return buffer.getLong();
-    }
+	@Override
+	public long getLong() {
+		return buffer.getLong();
+	}
 
-    @Override
-    public String getString() {
-        return new String(get(getUnsignedShort()));
-    }
+	@Override
+	public String getString() {
+		return new String(get(getUnsignedShort()));
+	}
 
-    @Override
-    public SystemAddress getAddress() {
-        int version = getByte();
-        if (version == 4) {
-            String address = ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff);
-            int port = getUnsignedShort();
-            return new SystemAddress(address, port, version);
-        } else if (version == 6) {
-            //TODO: IPv6 Decode
-            throw new UnsupportedOperationException("Can't read IPv6 address: Not Implemented");
-        } else {
-            throw new UnsupportedOperationException("Can't read IPv" + version + " address: unknown");
-        }
-    }
+	@Override
+	public SystemAddress getAddress() {
+		int version = getByte();
+		if (version == 4) {
+			String address = ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "." + ((~getByte()) & 0xff) + "."
+					+ ((~getByte()) & 0xff);
+			int port = getUnsignedShort();
+			return new SystemAddress(address, port, version);
+		} else if (version == 6) {
+			// TODO: IPv6 Decode
+			throw new UnsupportedOperationException("Can't read IPv6 address: Not Implemented");
+		} else {
+			throw new UnsupportedOperationException("Can't read IPv" + version + " address: unknown");
+		}
+	}
 
-    @Override
-    public boolean getBoolean() {
-        return getByte() > 0;
-    }
+	@Override
+	public ConnectionType getConnectionType() {
+		// We add an extra byte because we need to read the ID
+		if (getRemainingBytes() >= ConnectionType.MAGIC.length + 1) {
+			byte[] connectionMagicCheck = get(ConnectionType.MAGIC.length);
+			if (Arrays.equals(ConnectionType.MAGIC, connectionMagicCheck)) {
+				short id = (short) (getByte() & 0xff);
+				return ConnectionType.getType(id);
+			}
+		}
+		return ConnectionType.VANILLA;
+	}
 
-    @Override
-    public void putByte(byte b) {
-        buffer.put(b);
-    }
+	@Override
+	public boolean getBoolean() {
+		return getByte() > 0;
+	}
 
-    @Override
-    public void putShort(short s) {
-        buffer.putShort(s);
-    }
+	@Override
+	public void putByte(byte b) {
+		buffer.put(b);
+	}
 
-    @Override
-    public void putUnsignedShort(int us) {
-        buffer.putShort((short) us);
-    }
+	@Override
+	public void putShort(short s) {
+		buffer.putShort(s);
+	}
 
-    @Override
-    public void putLTriad(int t) {
-        byte b1, b2, b3;
-        b3 = (byte) (t & 0xFF);
-        b2 = (byte) ((t >> 8) & 0xFF);
-        b1 = (byte) ((t >> 16) & 0xFF);
-        put(new byte[]{b3, b2, b1});
-    }
+	@Override
+	public void putUnsignedShort(int us) {
+		buffer.putShort((short) us);
+	}
 
-    @Override
-    public void putInt(int i) {
-        buffer.putInt(i);
-    }
+	@Override
+	public void putLTriad(int t) {
+		byte b1, b2, b3;
+		b3 = (byte) (t & 0xFF);
+		b2 = (byte) ((t >> 8) & 0xFF);
+		b1 = (byte) ((t >> 16) & 0xFF);
+		put(new byte[] { b3, b2, b1 });
+	}
 
-    @Override
-    public void putLong(long l) {
-        buffer.putLong(l);
-    }
+	@Override
+	public void putInt(int i) {
+		buffer.putInt(i);
+	}
 
-    @Override
-    public void putString(String s) {
-        putUnsignedShort(s.getBytes().length);
-        put(s.getBytes());
-    }
+	@Override
+	public void putLong(long l) {
+		buffer.putLong(l);
+	}
 
-    @Override
-    public void putAddress(SystemAddress address) {
-        if (address.getVersion() != 4) {
-            throw new UnsupportedOperationException("Can't put IPv" + address.getVersion() + ": not implemented");
-        }
-        putByte((byte) address.getVersion());
-        for (String part : address.getIpAddress().split(Pattern.quote("."))) {
-            putByte((byte) ((byte) ~(Integer.parseInt(part)) & 0xFF));
-        }
-        putUnsignedShort(address.getPort());
-    }
+	@Override
+	public void putString(String s) {
+		putUnsignedShort(s.getBytes().length);
+		put(s.getBytes());
+	}
 
-    @Override
-    public void putBoolean(boolean b) {
-        putByte((byte) (b ? 1 : 0));
-    }
+	@Override
+	public void putAddress(SystemAddress address) {
+		if (address.getVersion() != 4) {
+			throw new UnsupportedOperationException("Can't put IPv" + address.getVersion() + ": not implemented");
+		}
+		putByte((byte) address.getVersion());
+		for (String part : address.getIpAddress().split(Pattern.quote("."))) {
+			putByte((byte) ((byte) ~(Integer.parseInt(part)) & 0xFF));
+		}
+		putUnsignedShort(address.getPort());
+	}
 
-    @Override
-    public void skip(int len) {
-        buffer.position(buffer.position() + len);
-    }
+	@Override
+	public ConnectionType putConnectionType() {
+		put(ConnectionType.MAGIC);
+		putByte((byte) ConnectionType.JRAKLIB_PLUS.getId());
+		return ConnectionType.JRAKLIB_PLUS;
+	}
 
-    @Override
-    public byte[] toByteArray() {
-        return buffer.array();
-    }
+	@Override
+	public void putBoolean(boolean b) {
+		putByte((byte) (b ? 1 : 0));
+	}
 
-    @Override
-    public int getRemainingBytes() {
-        return buffer.remaining();
-    }
+	@Override
+	public void skip(int len) {
+		buffer.position(buffer.position() + len);
+	}
+
+	@Override
+	public byte[] toByteArray() {
+		return buffer.array();
+	}
+
+	@Override
+	public int getRemainingBytes() {
+		return buffer.remaining();
+	}
 }

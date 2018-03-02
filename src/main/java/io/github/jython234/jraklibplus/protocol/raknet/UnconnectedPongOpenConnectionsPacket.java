@@ -20,6 +20,7 @@
 package io.github.jython234.jraklibplus.protocol.raknet;
 
 import io.github.jython234.jraklibplus.nio.Buffer;
+import io.github.jython234.jraklibplus.protocol.ConnectionType;
 import io.github.jython234.jraklibplus.protocol.RakNetPacket;
 
 import static io.github.jython234.jraklibplus.JRakLibPlus.ID_UNCONNECTED_PONG_OPEN_CONNECTIONS;
@@ -35,6 +36,7 @@ public class UnconnectedPongOpenConnectionsPacket extends RakNetPacket {
     public long pingID;
     public long serverID;
     public String identifier;
+    public ConnectionType connectionType;
 
     @Override
     protected void _encode(Buffer buffer) {
@@ -42,6 +44,7 @@ public class UnconnectedPongOpenConnectionsPacket extends RakNetPacket {
         buffer.putLong(serverID);
         buffer.put(RAKNET_MAGIC);
         buffer.putString(identifier);
+        connectionType = buffer.putConnectionType();
     }
 
     @Override
@@ -50,6 +53,7 @@ public class UnconnectedPongOpenConnectionsPacket extends RakNetPacket {
         serverID = buffer.getLong();
         buffer.skip(16); //MAGIC
         identifier = buffer.getString();
+        connectionType = buffer.getConnectionType();
     }
 
     @Override
