@@ -29,7 +29,7 @@ import lombok.Getter;
  * completely, as it is completely dependent on the implementation to implement
  * this feature.
  * 
- * @author Trent "MarfGamer" Summerlin
+ * @author Trent "Whirvis" Summerlin
  * @author jython234
  * @see <a href=
  *      "https://github.com/JRakNet/JRakNet/issues/new">https://github.com/JRakNet/JRakNet/issues/new</a>
